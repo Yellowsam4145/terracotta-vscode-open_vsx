@@ -1042,6 +1042,13 @@ async function startLanguageServer() {
 		clientOptions
 	);
 	client.start()
+	await client.onReady();
+	client.onNotification("loaded",(param: {}) => {
+		client.sendNotification("terracotta/updateConfiguration",{
+			dfRank: getConfigValue("rank"),
+			rankBehavior: getConfigValue("rankBehavior"),
+		})
+	})
 }
 
 //==========[ extension events ]=========\
@@ -1550,7 +1557,8 @@ export function activate(context: vscode.ExtensionContext) {
 				scopes: await CodeClient.getScopes(),
 				mode: await CodeClient.getMode(),
 				terracottaInstallPath: useSourceCode ? sourcePath : terracottaPath,
-				useSourceCode: useSourceCode
+				useSourceCode: useSourceCode,
+				rank: getConfigValue("rank"),
 			} as DebuggerExtraInfo)
 		}
 		else if (event.event == "switchToDev") {
@@ -1611,6 +1619,14 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 		else if (event.affectsConfiguration("terracotta.autoConnectToCodeClient")) {
 			CodeClient.setAutoConnect(getConfigValue("autoConnectToCodeClient"))
+		}
+		if (client) {
+			if (event.affectsConfiguration("terracotta.rank")) {
+				client.sendNotification("terracotta/updateConfiguration",{dfRank: getConfigValue("rank")})
+			}
+			else if (event.affectsConfiguration("terracotta.rankBehavior")) {
+				client.sendNotification("terracotta/updateConfiguration",{rankBehavior: getConfigValue("rankBehavior")})
+			}
 		}
 	})
 

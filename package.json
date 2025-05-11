@@ -102,6 +102,22 @@
 					"type": "string",
 					"description": "Only relvent if Use Source Code is enabled. The path to the Terracotta source code (should point to the uppermost folder of the installation, not to anything inside)",
 					"default": ""
+				},
+				"terracotta.rank": {
+					"scope": "window",
+					"description": "Rank to validate your code using. This should be set to the rank of the owner of the plot being compiled to. Setting this to a higher rank than you have does NOT bypass rank restrictions, it just stops warning you about them.",
+					"type": "string",
+					"enum": ["","Noble","Emperor","Mythic","Overlord"],
+					"enumItemLabels": ["Unranked","Noble","Emperor","Mythic","Overlord"],
+					"default": "Overlord"
+				},
+				"terracotta.rankBehavior": {
+					"scope": "window",
+					"type": "string",
+					"description": "What to do with actions that are inaccessible due to a rank requirement",
+					"enum": ["crossOutInaccessible", "hideInaccessible"],
+					"enumItemLabels": ["Cross Out Inaccessible Items","Hide Inaccessible Items"],
+					"default": "crossOutInaccessible"
 				}
 			}
 		},

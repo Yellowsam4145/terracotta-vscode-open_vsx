@@ -13,7 +13,8 @@ export interface DebuggerExtraInfo {
     scopes: string[],
     mode: "spawn" | "play" | "build" | "code" | "unknown"
     terracottaInstallPath: string,
-    useSourceCode?: boolean
+    useSourceCode?: boolean,
+    rank: "" | "noble" | "emperor" | "mythic" | "overlord"
 }
 
 //==========[ util functions ]=========\
@@ -79,6 +80,18 @@ const requestHandlers: {[key: string]: (args: dap.Request) => void} = {
                 process.exit(1)
             }
 
+            let rank: string = info.rank;
+            if (rank === "") {
+                rank = "Unranked"
+            } else if (!rank.match(/^[a-zA-Z]+$/g)) {
+                rank = "overlord"
+            }
+
+            let plotSize = launchArguments.plotSize.toString()
+            if (!plotSize.match(/^[0-9.]+$/g)) {
+                plotSize = "300"
+            }
+
             let folderUrl = pathToFileURL(request.arguments.folder)
             
             tcMetaFolderPath = pathToFileURL(request.arguments.folder); tcMetaFolderPath.pathname += "/.terracotta/"
@@ -111,7 +124,7 @@ const requestHandlers: {[key: string]: (args: dap.Request) => void} = {
                         command = `"${info.terracottaInstallPath.replaceAll("\\","\\\\").replaceAll('"','\\"')}"`
                     }
                 }
-                command += ` compile --project "${request.arguments.folder}" --includemeta --plotsize ${launchArguments.plotSize}`
+                command += ` compile --project "${request.arguments.folder}" --includemeta --plotsize ${plotSize} --rank ${rank}`
                 sendEvent('output',{
                     output: command+"\n",
                     category: "stderr",
