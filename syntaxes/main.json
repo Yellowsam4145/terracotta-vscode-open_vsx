@@ -19,13 +19,13 @@
                 {"include": "#typeConstructor"},
                 {"include": "#domain"},
                 {"include": "#conditionCall"},
-                {"include": "#parentheticFunctionCall"},
                 {"include": "#arglessFunctionCall"},
                 {"include": "#callCustomFunction"},
                 {"include": "#controlKeyword"},
                 {"include": "#variable"},
                 {"include": "#operator"},
-                {"include": "#typeAnnotationAnywhere"}
+                {"include": "#typeAnnotationAnywhere"},
+                {"include": "#parentheticFunctionCall"}
             ],
             "repository": {
                 "number": {
@@ -35,13 +35,12 @@
                 "callCustomFunction": {
                     "patterns": [
                         {
-                            "match": "(?<=^|(?:;?\\W+))(call|start)(?![\\w])\\s*(\\[\\]|\\[(?:\\\\\\]|[^\\]])*[^\\\\]\\]|\\[.*|\\w*)?(\\s*:\\s*\\w+)?",
+                            "match": "(?<=^|(?:;?\\W+))(call|start)(?![\\w])\\s*(\\w*)?(\\s*:\\s*\\w+)?",
                             "captures": {
                                 "1": {
                                     "name": "keyword.control.tc"
                                 },
                                 "2": {
-                                    "patterns": [{"include":"#advNameFunc"}],
                                     "name": "entity.name.function.tc"
                                 },
                                 "3": {
@@ -57,7 +56,7 @@
                     ],
                     "repository": {
                         "variablePattern": {
-                            "match": "(?<=^|(?:;?\\W+))(local|global|saved|line)(?![\\w])(?:\\s*(\\[\\]|\\[(?:\\\\\\]|[^\\]])*[^\\\\]\\]|\\[.*|\\w*)(\\s*\\:(\\s*\\w+)?)?)?",
+                            "match": "(?<=^|(?:;?\\W+))(local|global|saved|line)(?![\\w])(?:\\s*(\\w*)(\\s*\\:(\\s*\\w+)?)?)?",
                             "captures": {
                                 "3": {
                                     "name": "keyword.operator.tc"
@@ -72,15 +71,6 @@
                                     ]
                                 },
                                 "2": {
-                                    "patterns": [
-                                        {
-                                            "patterns": []
-                                        },
-                                        {
-                                            "patterns": [{"include":"#advName"}],
-                                            "name": "string.quoted.tc"
-                                        }
-                                    ],
                                     "name": "variable.other.tc"
                                 },
                                 "1": {
@@ -269,14 +259,13 @@
                             }
                         },
                         "genericActionDomain": {
-                            "match": "(\\w+\\s*:)\\s*(\\[\\]|\\[(?:\\\\\\]|[^\\]])*[^\\\\]\\]|\\[.*|\\w*)?((?<=\\w+)\\s*:\\s*\\w+)?",
+                            "match": "(\\w+\\s*:)\\s*(\\w*)?((?<=\\w+)\\s*:\\s*\\w+)?",
                             "captures": {
                                 "1": {
                                     "patterns": [{"include":"#operator"},{"include": "#target"}],
                                     "name": "support.class.tc variable.other.object.tc"
                                 },
                                 "2": {
-                                    "patterns": [{"include":"#advName"}],
                                     "name":"entity.name.function.tc"
                                 },
                                 "3": {
@@ -285,7 +274,7 @@
                             }
                         },
                         "genericValueDomain": {
-                            "match": "(\\w+\\s*\\.)\\s*(\\[\\]|\\[(?:\\\\\\]|[^\\]])*[^\\\\]\\]|\\[.*|\\w*)?",
+                            "match": "(\\w+\\s*\\.)\\s*(\\w*)?",
                             "captures": {
                                 "1": {
                                     "patterns": [{"include":"#operator"},{"include": "#target"}],
@@ -297,14 +286,13 @@
                             }
                         },
                         "genericConditionDomain": {
-                            "match": "(\\w+\\s*\\?)\\s*(\\[\\]|\\[(?:\\\\\\]|[^\\]])*[^\\\\]\\]|\\[.*|\\w*)?",
+                            "match": "(\\w+\\s*\\?)\\s*(\\w*)?((?<=\\w+)\\s*\\?\\s*\\w+)?",
                             "captures": {
                                 "1": {
                                     "patterns": [{"include":"#operator"},{"include": "#target"}],
                                     "name": "support.class.tc variable.other.object.tc"
                                 },
                                 "2": {
-                                    "patterns": [{"include":"#advName"}],
                                     "name":"entity.name.function.tc"
                                 }
                             }
@@ -312,7 +300,7 @@
                     }
                 },
                 "typeConstructor": {
-                    "match": "(?<=^|(?:;?\\W+))(vec|snd|csnd|loc|par|item|litem|pot)(?=\\s*\\[)",
+                    "match": "(?<=^|(?:;?\\W+))(vec|snd|csnd|loc|par|item|litem|pot)(?=\\s*\\()",
                     "captures": {
                         "0": {
                             "patterns": [
@@ -418,7 +406,7 @@
                     }
                 },
                 "paramHeader": {
-                    "match": "(?<=^|(?:;?\\W+))(PARAM)(?![\\w])\\s*(\\[\\]|\\[(?:\\\\\\]|[^\\]])*[^\\\\]\\]|\\[.*|\\w*)?(:)?([^=;]*)(?==|;|$)",
+                    "match": "(?<=^|(?:;?\\W+))(PARAM)\\s*(?:(?!\\W)(\\w*)*(:)?([^=;]*)\\w*(?==|;|$))?",
                     "captures": {
                         "1": {
                             "name": "storage.type meta.function.tc df.parameter.tc tc.header.parameter"
@@ -434,7 +422,6 @@
                         "4": {
                             "patterns": [
                                 {"include": "#operator"},
-                                {"include": "#paramModifierKeyword"},
                                 {"match": "(?<=^|(?:\\W+))var(?![\\w])","name": "entity.name.type.tc support.class.tc tc.type df.item.variable.tc"},
                                 {"include": "#standaloneTypeName"}
                             ]
@@ -452,10 +439,13 @@
             }
         },
         "standaloneTypeName": {
-            "match": "(?<=^|(?:;?\\W+))(str|num|vec|loc|pot|snd|txt|item|list|dict|par|any)(?![\\w])",
+            "match": "(?<=^|(?:;?\\W+))((?:(?:optional|plural|str|num|vec|loc|pot|snd|txt|item|list|dict|par|any)\\s*)+)(?![\\w])",
             "captures": {
                 "1": {
-                    "patterns": [{"include": "#typeName"}]
+                    "patterns": [
+                        {"include": "#typeName"},
+                        {"include": "#paramModifierKeyword"}
+                    ]
                 }
             }
         },
@@ -526,7 +516,7 @@
             }
         },
         "typeAnnotationAnywhere": {
-            "match": "(?<=\\s*:\\s*)\\w+",
+            "match": "(?<=\\s*:\\s*)(?:\\w|\\s)+",
             "captures": {
                 "0": {
                     "patterns": [{"include": "#standaloneTypeName"}]
@@ -536,60 +526,6 @@
         "operator": {
             "match": "[=*+-/:?<>%^!]",
             "name": "keyword.operator.tc"
-        },
-        "advNameFunc": {
-            "patterns": [
-                {
-                    "match": "(\\[\\s*)((\"|')(?:\\\\\\3|(?!\\3).)*(?:\\3|$|\\\\))(\\s*])?",
-                    "captures": {
-                        "2": {
-                            "patterns": [{"include": "#escapedChar"}],
-                            "name": "entity.name.function.tc tc.enclosed-name.name"
-                        },
-                        "1": {
-                            "name": "meta.brace.square.tc tc.enclosed-name.open"
-                        },
-                        "4": {
-                            "name": "meta.brace.square.tc tc.enclosed-name.close"
-                        }
-                    }
-                },
-                {
-                    "match": "(?<!\\].*\\[.*)\\[",
-                    "name": "meta.brace.square.tc tc.enclosed-name.open"
-                },
-                {
-                    "match": "(?<=[^\\\\])\\]",
-                    "name": "meta.brace.square.tc tc.enclosed-name.close"
-                }
-            ]
-        },
-        "advName": {
-            "patterns": [
-                {
-                    "match": "(\\[\\s*)((\"|')(?:\\\\\\3|(?!\\3).)*(?:\\3|$|\\\\))(\\s*])?",
-                    "captures": {
-                        "2": {
-                            "patterns": [{"include": "#escapedChar"}],
-                            "name": "string.quoted.tc tc.enclosed-name.name"
-                        },
-                        "1": {
-                            "name": "meta.brace.square.tc tc.enclosed-name.open"
-                        },
-                        "4": {
-                            "name": "meta.brace.square.tc tc.enclosed-name.close"
-                        }
-                    }
-                },
-                {
-                    "match": "(?<!\\].*\\[.*)\\[",
-                    "name": "meta.brace.square.tc tc.enclosed-name.open"
-                },
-                {
-                    "match": "(?<=[^\\\\])\\]",
-                    "name": "meta.brace.square.tc tc.enclosed-name.close"
-                }
-            ]
         },
         "controlKeyword": {
             "match": "(?<=^|(;?\\W+))(if|repeat|else|while|for|in|on|to|return|returnmult|break|continue|endthread|wait)(?![\\w])",

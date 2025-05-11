@@ -1344,7 +1344,7 @@ export function activate(context: vscode.ExtensionContext) {
 							convertNumber(codeValue.data.loc.yaw),
 						)
 					}
-					converted = `loc[${args.join(", ")}]`
+					converted = `loc(${args.join(", ")})`
 					break
 				case "vec":
 					args = [
@@ -1352,7 +1352,7 @@ export function activate(context: vscode.ExtensionContext) {
 						convertNumber(codeValue.data.y),
 						convertNumber(codeValue.data.z),
 					]
-					converted = `vec[${args.join(", ")}]`
+					converted = `vec(${args.join(", ")})`
 					break
 				case "snd":
 					let constructorType = codeValue.data.key ? "csnd" : "snd"
@@ -1370,7 +1370,7 @@ export function activate(context: vscode.ExtensionContext) {
 					} else if (codeValue.data.pitch !== 1) {
 						args.push(convertNumber(codeValue.data.pitch))
 					}
-					converted = `${constructorType}[${args.join(", ")}]`
+					converted = `${constructorType}(${args.join(", ")})`
 					break
 				case "part":
 					let fields: {[key: string]: string} = {}
@@ -1423,7 +1423,7 @@ export function activate(context: vscode.ExtensionContext) {
 								convertNumber(pdata.y),
 								convertNumber(pdata.z),
 							]
-							fields.Motion = `vec[${args.join(", ")}]`
+							fields.Motion = `vec(${args.join(", ")})`
 						}
 						if (pdata.motionVariation !== 100) {
 							fields["Motion Variation"] = convertNumber(pdata.motionVariation)
@@ -1431,16 +1431,16 @@ export function activate(context: vscode.ExtensionContext) {
 					}
 
 					if (Object.keys(fields).length > 0) {
-						converted = `par[${convertString(codeValue.data.particle)}, {${Object.entries(fields).map(e => `"${e[0]}" = ${e[1]}`).join(", ")}}]`
+						converted = `par(${convertString(codeValue.data.particle)}, {${Object.entries(fields).map(e => `"${e[0]}" = ${e[1]}`).join(", ")}})`
 					} else {
-						converted = `par[${convertString(codeValue.data.particle)}]`
+						converted = `par(${convertString(codeValue.data.particle)})`
 					}
 					break
 				case "var":
 					let varScope = codeValue.data.scope == "unsaved" ? "global" : codeValue.data.scope
 					let varName: string = codeValue.data.name
 					if (varName.match(/[^A-Za-z0-9_]/)) {
-						converted = `${varScope} [${convertString(varName)}]`
+						converted = `${varScope} (${convertString(varName)})`
 					} else {
 						converted = `${varScope} ${varName}`
 					}
@@ -1455,7 +1455,7 @@ export function activate(context: vscode.ExtensionContext) {
 							args.push(convertNumber(codeValue.data.dur))
 						}
 					}
-					converted = `pot[${args.join(", ")}]`
+					converted = `pot(${args.join(", ")})`
 					break
 				default:
 					return null
