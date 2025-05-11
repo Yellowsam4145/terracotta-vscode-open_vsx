@@ -54,7 +54,7 @@ export class VersionManager {
 
                 this.downloadableVersions.add(version)
                 this.downloadInfo[version] = {}
-                if (compareVersions(version,"0.0.0") == 1 && version.split("-").length == 1) {
+                if (compareVersions(version,this.latestDownloadableRelease) == 1 && version.split("-").length == 1) {
                     this.latestDownloadableRelease = version
                 }
 
