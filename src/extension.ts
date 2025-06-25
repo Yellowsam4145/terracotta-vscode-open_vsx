@@ -974,6 +974,7 @@ async function startLanguageServer() {
 	let server: cp.ChildProcess
 
 	if (client) {
+		client.sendNotification("terracotta/exit");
 		client.stop()
 	}
 
@@ -983,11 +984,7 @@ async function startLanguageServer() {
 	if (useSourceCode) {
 		serverOptions = async function() {
 			if (process.platform == "darwin") {
-				if (useSourceCode) {
-					server = cp.exec(`cd "${sourcePath}"; ~/.deno/bin/deno run --allow-read --allow-env "${mainScriptPath}" server`,{maxBuffer: Infinity})
-				} else {
-					server = cp.exec(`/tmp/terracotta\\ mac`)
-				}
+				server = cp.exec(`cd "${sourcePath}"; ~/.deno/bin/deno run --allow-read --allow-env "${mainScriptPath}" server`,{maxBuffer: Infinity})
 			}
 			else if (process.platform == "win32") {
 				//add windows support later
@@ -1640,6 +1637,7 @@ export function deactivate(): Thenable<void> | undefined {
 	if (!client) {
 		return undefined
 	}
+	client.sendNotification("terracotta/exit");
 	vscode.commands.executeCommand('setContext', 'terracotta.extensionActivated', false);
 	console.log("DEACTIVATE")
 	return client.stop()
