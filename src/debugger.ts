@@ -102,7 +102,7 @@ const requestHandlers: {[key: string]: (args: dap.Request) => void} = {
             try {
                 await fs.stat(tcMetaFolderPath)
             } catch (e: any) {
-                if (e.errno == -2) {
+                if (e.code == "ENOENT") {
                     await fs.mkdir(tcMetaFolderPath)
                 } else {
                     sendEvent('output',{
