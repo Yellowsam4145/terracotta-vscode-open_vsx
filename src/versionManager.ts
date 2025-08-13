@@ -38,7 +38,7 @@ export class VersionManager {
     async fetchDownloadableVersions() {
         let releases: Response
         try {
-            releases = await fetch("https://api.github.com/repos/mrawesomeowl/terracotta/releases");
+            releases = await fetch("https://api.github.com/repos/Owlfroggy/terracotta/releases");
         } catch (e) {
             let desc: string | undefined = undefined
             if (`${e}` == "InvalidArgumentError: Invalid URL protocol: the URL must start with `http:` or `https:`.") {
