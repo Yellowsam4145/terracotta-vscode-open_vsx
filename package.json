@@ -568,24 +568,24 @@
 		"watch": "tsc -watch -p ./"
 	},
 	"dependencies": {
-		"await-notify": "^1.0.1",
-		"base64-js": "^1.5.1",
-		"copy-paste": "^1.5.3",
-		"fix-esm": "^1.0.1",
-		"json-stable-stringify": "^1.1.1",
-		"nbtify": "^2.2.0",
-		"tsc-esm-fix": "^3.1.2",
-		"vscode-debugprotocol": "^1.51.0",
-		"vscode-jsonrpc": "^8.2.1",
-		"vscode-languageclient": "^7.0.0",
-		"vscode-languageserver": "^9.0.1",
-		"ws": "^8.18.0"
+		"await-notify": "1.0.1",
+		"base64-js": "1.5.1",
+		"copy-paste": "1.5.3",
+		"fix-esm": "1.0.1",
+		"json-stable-stringify": "1.1.1",
+		"nbtify": "2.2.0",
+		"tsc-esm-fix": "3.1.2",
+		"vscode-debugprotocol": "1.51.0",
+		"vscode-jsonrpc": "8.2.1",
+		"vscode-languageclient": "7.0.0",
+		"vscode-languageserver": "9.0.1",
+		"ws": "8.18.0"
 	},
 	"devDependencies": {
-		"@types/copy-paste": "^1.1.33",
-		"@types/node": "^18",
-		"@types/vscode": "^1.73.0",
-		"@types/ws": "^8.5.11",
-		"typescript": "^5.4.2"
+		"@types/copy-paste": "1.1.33",
+		"@types/node": "18",
+		"@types/vscode": "1.73.0",
+		"@types/ws": "8.5.11",
+		"typescript": "5.4.2"
 	}
 }

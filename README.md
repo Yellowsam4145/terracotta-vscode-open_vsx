@@ -1,4 +1,7 @@
 # Terracotta VSCode Extension
+
+## NOTE: If you have previously manually installed a copy of the extension from a .vsix file, remove that before installing this
+
 Provides the following features for Terracotta:
 - Autocomplete/Intellisense
 - Syntax highlighting
