@@ -18,8 +18,8 @@ import * as CodeClient from "./codeclientManager"
 
 //the current DF_NBT value df uses. keeping this updated is required
 //to make sure item data doesnt break between minecraft versions
-const DF_NBT = 3955
-const EXTENSION_VERSION = "0.0.1"
+const DF_NBT = 4440
+const EXTENSION_VERSION = "0.0.5"
 
 const debuggers: {[key: string]: vscode.DebugSession} = {}
 const validItemIds: Dict<boolean> = {}

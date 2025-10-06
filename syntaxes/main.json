@@ -528,7 +528,7 @@
             "name": "keyword.operator.tc"
         },
         "controlKeyword": {
-            "match": "(?<=^|(;?\\W+))(if|repeat|else|while|for|in|on|to|return|returnmult|break|continue|endthread|wait)(?![\\w])",
+            "match": "(?<=^|(;?\\W+))(if|repeat|else|do|while|for|in|on|to|return|returnmult|break|continue|endthread|wait|print|printRaw|printError|printWarning)(?![\\w])",
             "name": "keyword.control.tc"
         },
         "paramModifierKeyword": {

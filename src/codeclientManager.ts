@@ -138,9 +138,13 @@ export const getMode = makeCodeClientGetter<string>("mode","unknown",(message, r
 export const getInventory = makeCodeClientGetter<NBTTypes.ListTagLike>("inv",[],(message, returnValue) => {
     let str = message.toString()
     try {
+        // console.log(str)
         const data = NBT.parse<NBTTypes.ListTagLike>(str)
         returnValue(data)
-    } catch {}
+    } catch (e) {
+        // console.log("Error getting inventory")
+        // console.error(e)
+    }
 })
 
 async function fireCallbacks<T extends CallbackTarget>(target: T, args?: [...Parameters<ElementOfSet<typeof callbacks[T]>>]) {
