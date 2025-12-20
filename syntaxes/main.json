@@ -15,6 +15,7 @@
                 {"include": "#commentedLine"},
                 {"include": "#braces"},
                 {"include": "#string"},
+                {"include": "#hexNumber"},
                 {"include": "#number"},
                 {"include": "#typeConstructor"},
                 {"include": "#domain"},
@@ -29,7 +30,11 @@
             ],
             "repository": {
                 "number": {
-                    "match": "(?:(?<![A-z0-9_]\\s*)-)?(?!_)((?:\\d|_(?!\\.))*\\.?(?!_)(?:\\d|_(?![^0-9]))+)",
+                    "match": "(?:(?<![A-z0-9_]\\s*)-)?(?!_)((?:\\d|_(?!\\.))**\\.?(0[bB])?(?!_)(?:\\d|_(?![^0-9]))+)",
+                    "name": "constant.numeric.tc"
+                },
+                "hexNumber": {
+                    "match": "(?:(?<![A-z0-9_]\\s*)-)?(?!_)((?:[0-9A-fa-f]|_(?!\\.))*(0[xX])\\.?(?!_)(?:[0-9A-fa-f]|_(?![^0-9A-fa-f]))+)",
                     "name": "constant.numeric.tc"
                 },
                 "callCustomFunction": {
@@ -524,7 +529,7 @@
             }
         },
         "operator": {
-            "match": "[=*+-/:?<>%^!]",
+            "match": "[=*+-/:?<>%^!&|]|(\\$)?[~`&|<>\\^]",
             "name": "keyword.operator.tc"
         },
         "controlKeyword": {
