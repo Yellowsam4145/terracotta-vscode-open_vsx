@@ -14,7 +14,8 @@ import * as NBTTypes from "nbtify"
 const NBT: typeof NBTTypes = require("fix-esm").require("nbtify");
 import { VersionManager } from "./versionManager";
 import { compareVersions } from "./util/compareVersions";
-import * as CodeClient from "./codeclientManager"
+import * as CodeClient from "./codeclientManager";
+import * as TCClient from "./terracottaClientManager";
 
 //the current DF_NBT value df uses. keeping this updated is required
 //to make sure item data doesnt break between minecraft versions
@@ -1106,6 +1107,9 @@ export function activate(context: vscode.ExtensionContext) {
 	
 	updateTerracottaPath()
 	startItemLibraryEditor(context)
+
+	//= terracotta client stuff =\\
+	TCClient.tryConnection();
 
 	//= codeclient stuff =\\
 	CodeClient.setAutoConnect(getConfigValue("autoConnectToCodeClient"))
