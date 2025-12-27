@@ -1281,6 +1281,23 @@ export function activate(context: vscode.ExtensionContext) {
 	}
 
 	//= commands =\\
+	vscode.commands.registerCommand("extension.terracotta.test",() => {
+		TCClient.sendRequest(
+			new TCClient.InitiateCodeEditA2CRequest(
+				[],
+				// ['H4sIAAAAAAAA/6WSMWvDMBCF/4q4OUMpbQdtoVMHL03oUkq4WIciKktGOpWE4P/ek21al5IhZJL07t29T0hn2PvYfmbQ72dwBvR0htW8aqAvCixnTFZcYmLqqv1jEK1lF4OYng/IMKwujOg9nijtZvf/UdNuVGo7H2ueQcYqBexIRONKsCXDILHZRwZ9N+YtG/d+x2gXvbGf+bapkOi1quElHCg5Vhs+ecqwuMaGgmkoZ7R0Ef8X4P7hCoK1MSr32I6BE8eWjqze0BdSDSXrgr2B5fEKlleyxWP6AVl7Z0Mnz6yaaOgGiKfhz69YdkvlG+EEqSFsAgAA'],
+				[{"type": TCClient.TemplateType.PlayerEvent, "name": "Chat"}]
+			),
+			(request, response: TCClient.InitiateCodeEditC2AResponse) => {
+				if (response instanceof TCClient.ErrorResponse) {
+					vscode.window.showErrorMessage("Error placing templates: "+response.errorMessage);
+				} else {
+					vscode.window.showInformationMessage("placement successful!");
+				}
+			}
+		)
+	})
+
 	vscode.commands.registerCommand("extension.terracotta.refreshCodeClient",() => {
 		CodeClient.tryConnection();
 	})

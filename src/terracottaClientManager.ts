@@ -17,10 +17,22 @@ enum Permission {
 enum RequestMethod {
     RequestToken = "request_token",
     ProvideToken = "provide_token",
+    InitiateCodeEdit = "initiate_code_edit",
+}
+
+export enum TemplateType {
+    PlayerEvent = "PLAYER_EVENT",
+    EntityEvent = "ENTITY_EVENT",
+    Function = "FUNCTION",
+    Process = "PROCESS",
+}
+export interface TemplateIdentifier {
+    type: TemplateType,
+    name: string
 }
 
 
-class Message {
+export class Message {
     public id: number = -1;
 
     constructor(
@@ -39,7 +51,10 @@ class Message {
     }
 }
 
-class Request extends Message {
+type RequestCallback<T extends Request, Y extends Response> = (request: T, response: Y) => void;
+export class Request extends Message {
+    responseCallbacks: RequestCallback<any,any>[] = [];
+
     constructor(
         public method: string,
     ) { super(MessageType.Request); }
@@ -50,14 +65,14 @@ class Request extends Message {
     }
 }
 
-class Response extends Message {
+export class Response extends Message {
     success: boolean = true;
     constructor() {
         super(MessageType.Response);
     }
 }
 
-class ErrorResponse extends Response {
+export class ErrorResponse extends Response {
     constructor(
         public errorCode: string,
         public errorMessage: string,
@@ -67,7 +82,7 @@ class ErrorResponse extends Response {
     }
 }
 
-class RequestTokenA2CRequest extends Request {
+export class RequestTokenA2CRequest extends Request {
     constructor(
         public appName: string,
         public permissions: Permission[],
@@ -79,13 +94,13 @@ class RequestTokenA2CRequest extends Request {
         out.data.permissions = this.permissions;
     }
 } 
-class RequestTokenC2AResponse extends Response {
+export class RequestTokenC2AResponse extends Response {
     constructor(
         public token: string,
     ) {super(); }
 }
 
-class ProvideTokenA2CRequest extends Request {
+export class ProvideTokenA2CRequest extends Request {
     constructor(
         public token: string,
     ) { super(RequestMethod.ProvideToken); }
@@ -95,8 +110,24 @@ class ProvideTokenA2CRequest extends Request {
         out.data.token = this.token;
     }
 } 
-class ProvideTokenC2AResponse extends Response {
+export class ProvideTokenC2AResponse extends Response {
     constructor() {super(); }
+}
+
+export class InitiateCodeEditA2CRequest extends Request {
+    constructor(
+        public placeTemplates: string[],
+        public breakTemplates: TemplateIdentifier[],
+    ) { super(RequestMethod.InitiateCodeEdit); }
+
+    protected override buildOn(out: any) {
+        super.buildOn(out);
+        out.data.place_templates = this.placeTemplates;
+        out.data.break_templates = this.breakTemplates;
+    }
+}
+export class InitiateCodeEditC2AResponse extends Response {
+    constructor() { super(); }
 }
 
 export let webSocket: WebSocket;
@@ -112,44 +143,39 @@ let providedToken: string | undefined = undefined;
 const activeRequests: Map<number, Request> = new Map();
 
 async function handleResponse(request: Request, response: Response) {
-    if (request instanceof RequestTokenA2CRequest) {
-        if (response instanceof ErrorResponse) {
-            // TODO: prompt to refresh connection
-            window.showErrorMessage(`Could not connect to Terracotta client: ${response.errorMessage}`);
-            close();
-        } else if (response instanceof RequestTokenC2AResponse) {
-            token = response.token;
-            isAuthed = true;
-            await extensionContext.secrets.store('tcclient_token', token);
-        }
-    }
-    else if (request instanceof ProvideTokenA2CRequest) {
-        if (response instanceof ErrorResponse) {
-            console.warn(`Provided token was invalid, requesting new one (${response.errorMessage})`)
-            requestToken();
-        } else if (response instanceof ProvideTokenC2AResponse) {
-            isAuthed = true;
-            token = providedToken;
-        }
+    for (const callback of request.responseCallbacks) {
+        callback(request, response);
     }
 }
 
 function requestToken() {
-    sendRequest(new RequestTokenA2CRequest(
-        "terracotta",
-        [Permission.EditCode,Permission.ChangeMode,Permission.GetPlotInfo]
-    ));
+    sendRequest(
+        new RequestTokenA2CRequest(
+            "terracotta",
+            [Permission.EditCode,Permission.ChangeMode,Permission.GetPlotInfo]
+        ), 
+        async (request, response: RequestTokenC2AResponse) => {
+            if (response instanceof ErrorResponse) {
+                // TODO: prompt to refresh connection
+                window.showErrorMessage(`Could not connect to Terracotta client: ${response.errorMessage}`);
+                close();
+            } else if (response instanceof RequestTokenC2AResponse) {
+                token = response.token;
+                isAuthed = true;
+                await extensionContext.secrets.store('tcclient_token', token);
+            }
+        }
+    );
 }
 
 let latestRequestId: number = 0;
-export function sendRequest(request: Request) {
+export function sendRequest<T extends Request, Y extends Response>(request: T, callback?: (request: T, response: Y) => void) {
     latestRequestId++;
     request.id = latestRequestId;
     activeRequests.set(request.id,request);
+    if (callback) request.responseCallbacks.push(callback);
     webSocket.send(request.serialize());
 }
-
-//TODO: periodic auto connection
 
 export function initialize(context: ExtensionContext) {
     extensionContext = context;
@@ -174,7 +200,18 @@ export function tryConnection() {
         let storedToken = await extensionContext.secrets.get("tcclient_token");
         if (storedToken) {
             providedToken = storedToken;
-            sendRequest(new ProvideTokenA2CRequest(storedToken))
+            sendRequest(
+                new ProvideTokenA2CRequest(storedToken),
+                (request, response: ProvideTokenC2AResponse) => {
+                    if (response instanceof ErrorResponse) {
+                        console.warn(`Provided token was invalid, requesting new one (${response.errorMessage})`)
+                        requestToken();
+                    } else if (response instanceof ProvideTokenC2AResponse) {
+                        isAuthed = true;
+                        token = providedToken;
+                    }
+                }
+            )
         } else {
             requestToken();
         }
@@ -200,6 +237,9 @@ export function tryConnection() {
                         break messageParser;
                     }
                     else if (request instanceof ProvideTokenA2CRequest) {
+                        message = new ProvideTokenC2AResponse();
+                    }
+                    else if (request instanceof InitiateCodeEditA2CRequest) {
                         message = new ProvideTokenC2AResponse();
                     }
                 }

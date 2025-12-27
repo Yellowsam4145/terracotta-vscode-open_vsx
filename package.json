@@ -377,6 +377,11 @@
 				"icon": "$(versions)"
 			},
 			{
+				"command": "extension.terracotta.test",
+				"title": "Test Command",
+				"category": "Terracotta"
+			},
+			{
 				"command": "extension.terracotta.info.codeClientAuth",
 				"title": "Code Client Auth Info",
 				"category": "Terracotta"
