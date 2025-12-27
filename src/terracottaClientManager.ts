@@ -53,6 +53,10 @@ export class Message {
 
 type RequestCallback<T extends Request, Y extends Response> = (request: T, response: Y) => void;
 export class Request extends Message {
+    readonly RESPONSE_CLASS: (new (...args: any[]) => Response) & {
+        parse: (msgJson: any) => Response
+    } = Response;
+
     responseCallbacks: RequestCallback<any,any>[] = [];
 
     constructor(
@@ -70,6 +74,10 @@ export class Response extends Message {
     constructor() {
         super(MessageType.Response);
     }
+
+    static parse(msgJson: any) {
+        return new Response();
+    }
 }
 
 export class ErrorResponse extends Response {
@@ -82,7 +90,10 @@ export class ErrorResponse extends Response {
     }
 }
 
+//=- request token -=\\
 export class RequestTokenA2CRequest extends Request {
+    override readonly RESPONSE_CLASS = RequestTokenC2AResponse;
+
     constructor(
         public appName: string,
         public permissions: Permission[],
@@ -98,9 +109,16 @@ export class RequestTokenC2AResponse extends Response {
     constructor(
         public token: string,
     ) {super(); }
+
+    static override parse(msgJson: any): RequestTokenC2AResponse {
+        return new RequestTokenC2AResponse(msgJson.data.token);
+    }
 }
 
+//=- provide token -=\\
 export class ProvideTokenA2CRequest extends Request {
+    override readonly RESPONSE_CLASS = ProvideTokenC2AResponse;
+
     constructor(
         public token: string,
     ) { super(RequestMethod.ProvideToken); }
@@ -112,9 +130,16 @@ export class ProvideTokenA2CRequest extends Request {
 } 
 export class ProvideTokenC2AResponse extends Response {
     constructor() {super(); }
+
+    static override parse(msgJson: any): ProvideTokenC2AResponse {
+        return new ProvideTokenC2AResponse();
+    }
 }
 
+//=- initiate code edit -=\\
 export class InitiateCodeEditA2CRequest extends Request {
+    override readonly RESPONSE_CLASS = InitiateCodeEditC2AResponse;
+
     constructor(
         public placeTemplates: string[],
         public breakTemplates: TemplateIdentifier[],
@@ -128,6 +153,10 @@ export class InitiateCodeEditA2CRequest extends Request {
 }
 export class InitiateCodeEditC2AResponse extends Response {
     constructor() { super(); }
+
+    static override parse(msgJson: any): InitiateCodeEditC2AResponse {
+        return new InitiateCodeEditC2AResponse();
+    }
 }
 
 export let webSocket: WebSocket;
@@ -232,16 +261,10 @@ export function tryConnection() {
                     if (msgJson.success == false) {
                         message = new ErrorResponse(msgJson.data.error_code, msgJson.data.error_message);
                     }
-                    else if (request instanceof RequestTokenA2CRequest) {
-                        message = new RequestTokenC2AResponse(msgJson.data.token);
-                        break messageParser;
-                    }
-                    else if (request instanceof ProvideTokenA2CRequest) {
-                        message = new ProvideTokenC2AResponse();
-                    }
-                    else if (request instanceof InitiateCodeEditA2CRequest) {
-                        message = new ProvideTokenC2AResponse();
-                    }
+
+                    message = request.RESPONSE_CLASS.parse(msgJson);
+                    
+                    break messageParser;
                 }
             }
     
