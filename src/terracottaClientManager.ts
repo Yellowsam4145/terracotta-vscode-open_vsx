@@ -1,4 +1,5 @@
 import { ClientRequest, IncomingMessage } from "node:http";
+import { ExtensionContext } from "vscode";
 import { RawData, WebSocket } from "ws"
 
 enum MessageType {
@@ -14,7 +15,8 @@ enum Permission {
 }
 
 enum RequestMethod {
-    RequestToken = "request_token"
+    RequestToken = "request_token",
+    ProvideToken = "provide_token",
 }
 
 
@@ -83,26 +85,58 @@ class RequestTokenC2AResponse extends Response {
     ) {super(); }
 }
 
+class ProvideTokenA2CRequest extends Request {
+    constructor(
+        public token: string,
+    ) { super(RequestMethod.ProvideToken); }
+
+    protected override buildOn(out: any) {
+        super.buildOn(out);
+        out.data.token = this.token;
+    }
+} 
+class ProvideTokenC2AResponse extends Response {
+    constructor() {super(); }
+}
+
 export let webSocket: WebSocket;
 
 export let isConnected: boolean = false;
 export let isAuthed: boolean = false;
 
-let token: string;
+let extensionContext: ExtensionContext;
+let token: string | undefined = undefined;
+let providedToken: string | undefined = undefined;
 
 /** key: id */
 const activeRequests: Map<number, Request> = new Map();
 
-function handleResponse(request: Request, response: Response) {
+async function handleResponse(request: Request, response: Response) {
     if (request instanceof RequestTokenA2CRequest) {
         if (response instanceof ErrorResponse) {
             // disconnect or smth idk
         } else if (response instanceof RequestTokenC2AResponse) {
             token = response.token;
             isAuthed = true;
-            console.log("RECEIVED A TOKEN!!",token)
+            await extensionContext.secrets.store('tcclient_token', token);
         }
     }
+    else if (request instanceof ProvideTokenA2CRequest) {
+        if (response instanceof ErrorResponse) {
+            console.warn(`Provided token was invalid, requesting new one (${response.errorMessage})`)
+            requestToken();
+        } else if (response instanceof ProvideTokenC2AResponse) {
+            isAuthed = true;
+            token = providedToken;
+        }
+    }
+}
+
+function requestToken() {
+    sendRequest(new RequestTokenA2CRequest(
+        "terracotta",
+        [Permission.EditCode,Permission.ChangeMode,Permission.GetPlotInfo]
+    ));
 }
 
 let latestRequestId: number = 0;
@@ -114,6 +148,10 @@ export function sendRequest(request: Request) {
 }
 
 //TODO: periodic auto connection
+
+export function initialize(context: ExtensionContext) {
+    extensionContext = context;
+}
 
 export function tryConnection() {
     if (webSocket) webSocket.close();
@@ -131,10 +169,13 @@ export function tryConnection() {
         isConnected = true;
 
         console.log("OPENED!");
-        sendRequest(new RequestTokenA2CRequest(
-            "terracotta",
-            [Permission.EditCode,Permission.ChangeMode,Permission.GetPlotInfo]
-        ));
+        let storedToken = await extensionContext.secrets.get("tcclient_token");
+        if (storedToken) {
+            providedToken = storedToken;
+            sendRequest(new ProvideTokenA2CRequest(storedToken))
+        } else {
+            requestToken();
+        }
     })
 
     webSocket.on("message",(raw: RawData | string) => {
@@ -155,6 +196,9 @@ export function tryConnection() {
                     else if (request instanceof RequestTokenA2CRequest) {
                         message = new RequestTokenC2AResponse(msgJson.data.token);
                         break messageParser;
+                    }
+                    else if (request instanceof ProvideTokenA2CRequest) {
+                        message = new ProvideTokenC2AResponse();
                     }
                 }
             }

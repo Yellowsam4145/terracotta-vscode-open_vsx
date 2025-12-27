@@ -1109,6 +1109,7 @@ export function activate(context: vscode.ExtensionContext) {
 	startItemLibraryEditor(context)
 
 	//= terracotta client stuff =\\
+	TCClient.initialize(context)
 	TCClient.tryConnection();
 
 	//= codeclient stuff =\\
