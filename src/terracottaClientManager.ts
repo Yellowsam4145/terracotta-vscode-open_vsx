@@ -1,5 +1,5 @@
 import { ClientRequest, IncomingMessage } from "node:http";
-import { ExtensionContext } from "vscode";
+import { ExtensionContext, window } from "vscode";
 import { RawData, WebSocket } from "ws"
 
 enum MessageType {
@@ -114,7 +114,9 @@ const activeRequests: Map<number, Request> = new Map();
 async function handleResponse(request: Request, response: Response) {
     if (request instanceof RequestTokenA2CRequest) {
         if (response instanceof ErrorResponse) {
-            // disconnect or smth idk
+            // TODO: prompt to refresh connection
+            window.showErrorMessage(`Could not connect to Terracotta client: ${response.errorMessage}`);
+            close();
         } else if (response instanceof RequestTokenC2AResponse) {
             token = response.token;
             isAuthed = true;
@@ -227,4 +229,8 @@ export function tryConnection() {
         isAuthed = false
         console.log("CLOSED!")
     })
+}
+
+export function close() {
+    webSocket.close();
 }
