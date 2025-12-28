@@ -25,6 +25,13 @@ enum NotificationMethod {
     MODE_CHANGED = "MODE_CHANGED",
 }
 
+export enum DFMode {
+    SPAWN = "SPAWN",
+    DEV = "DEV",
+    PLAY = "PLAY",
+    BUILD = "BUILD",
+}
+
 export enum TemplateType {
     PLAYER_EVENT = "PLAYER_EVENT",
     ENTITY_EVENT = "ENTITY_EVENT",
@@ -83,6 +90,16 @@ export class Response extends Message {
 
     static parse(msgJson: any) {
         return new Response();
+    }
+}
+
+export class Notification extends Message {
+    constructor() {
+        super(MessageType.NOTIFICATION);
+    }
+
+    static parse(msgJson: any): Notification {
+        return new Notification()
     }
 }
 
@@ -165,10 +182,23 @@ export class InitiateCodeEditC2AResponse extends Response {
     }
 }
 
+//=- notifications -=\\
+export class ModeChangedC2ANotification extends Notification {
+    constructor(
+        public newMode: DFMode
+    ) { super(); }
+    
+    static override parse(msgJson: any): ModeChangedC2ANotification {
+        return new ModeChangedC2ANotification(msgJson.data.new_mode);
+    }
+}
+
 export let webSocket: WebSocket;
 
 export let isConnected: boolean = false;
 export let isAuthed: boolean = false;
+
+export let mode: DFMode = DFMode.SPAWN;
 
 let extensionContext: ExtensionContext;
 let token: string | undefined = undefined;
@@ -180,6 +210,12 @@ const activeRequests: Map<number, Request> = new Map();
 async function handleResponse(request: Request, response: Response) {
     for (const callback of request.responseCallbacks) {
         callback(request, response);
+    }
+}
+
+async function handleNotification(notification: Notification) {
+    if (notification instanceof ModeChangedC2ANotification) {
+        mode = notification.newMode;
     }
 }
 
@@ -233,7 +269,7 @@ export async function tryConnection() {
     webSocket.on("open",async () => {
         isConnected = true;
 
-        console.log("OPENED!");
+        console.log ("OPENED!");
         let storedToken = await extensionContext.secrets.get("tcclient_token");
         if (storedToken) {
             providedToken = storedToken;
@@ -255,7 +291,7 @@ export async function tryConnection() {
     })
 
     webSocket.on("message",(raw: RawData | string) => {
-        console.log("received ",raw.toString());
+        console.log ("received ",raw.toString());
         try {
             let msgJson = JSON.parse(raw.toString());
     
@@ -275,10 +311,21 @@ export async function tryConnection() {
 
                     break messageParser;
                 }
+                case MessageType.NOTIFICATION: {
+                    let notificationClass;
+                    switch (msgJson.method) {
+                        case NotificationMethod.MODE_CHANGED: { notificationClass = ModeChangedC2ANotification; break }
+                        default: throw new Error(`Received notification for unknown method ${msgJson.method}`)
+                    }
+                    message = notificationClass?.parse(msgJson);
+                    
+                    break messageParser;
+                }
             }
     
             if (message === undefined) { throw new Error("Failed to parse message (no idea why)"); }
             if (message instanceof Response) handleResponse(activeRequests.get(id)!, message);
+            if (message instanceof Notification) handleNotification(message);
         } catch (e) {
             console.error(e);
         }
@@ -293,12 +340,12 @@ export async function tryConnection() {
     })
 
     webSocket.on("upgrade",() => {
-        console.log("upgraded");
+        // console.log("upgraded");
     })
 
     webSocket.on("close",() => {
         if (isConnected) {
-            console.log("CLOSED!")
+            console.log ("CLOSED!")
         }
         isConnected = false
         isAuthed = false

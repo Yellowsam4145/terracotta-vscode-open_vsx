@@ -1282,6 +1282,7 @@ export function activate(context: vscode.ExtensionContext) {
 
 	//= commands =\\
 	vscode.commands.registerCommand("extension.terracotta.test",() => {
+		vscode.window.showInformationMessage(TCClient.mode);
 		TCClient.sendRequest(
 			new TCClient.InitiateCodeEditA2CRequest(
 				// [],
