@@ -1,6 +1,7 @@
 import { ClientRequest, IncomingMessage } from "node:http";
 import { ExtensionContext, window } from "vscode";
 import { RawData, WebSocket } from "ws"
+import { isPortTaken } from "./util/util";
 
 enum MessageType {
     Request = "request",
@@ -210,8 +211,10 @@ export function initialize(context: ExtensionContext) {
     extensionContext = context;
 }
 
-export function tryConnection() {
+export async function tryConnection() {
     if (webSocket) webSocket.close();
+    let isTaken = await isPortTaken(39893);
+    if (isTaken == false) return;
     //client
     webSocket = new WebSocket("ws://localhost:39893");
 
@@ -263,7 +266,7 @@ export function tryConnection() {
                     }
 
                     message = request.RESPONSE_CLASS.parse(msgJson);
-                    
+
                     break messageParser;
                 }
             }
@@ -288,12 +291,18 @@ export function tryConnection() {
     })
 
     webSocket.on("close",() => {
+        if (isConnected) {
+            console.log("CLOSED!")
+        }
         isConnected = false
         isAuthed = false
-        console.log("CLOSED!")
     })
 }
 
 export function close() {
     webSocket.close();
 }
+
+setInterval(() => {
+    if (!isConnected) tryConnection()
+},10000)
