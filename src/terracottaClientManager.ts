@@ -19,6 +19,7 @@ enum RequestMethod {
     REQUEST_TOKEN = "REQUEST_TOKEN",
     PROVIDE_TOKEN = "PROVIDE_TOKEN",
     INITIATE_CODE_EDIT = "INITIATE_CODE_EDIT",
+    CHANGE_MODE = "CHANGE_MODE",
 }
 
 enum NotificationMethod {
@@ -159,6 +160,27 @@ export class ProvideTokenC2AResponse extends Response {
     }
 }
 
+//=- change mode -=\\
+export class ChangeModeA2CRequest extends Request {
+    override readonly RESPONSE_CLASS = ChangeModeC2AResponse;
+
+    constructor(
+        public newMode: DFMode,
+    ) { super(RequestMethod.CHANGE_MODE); }
+
+    protected override buildOn(out: any) {
+        super.buildOn(out);
+        out.data.new_mode = this.newMode;
+    }
+} 
+export class ChangeModeC2AResponse extends Response {
+    constructor() {super(); }
+
+    static override parse(msgJson: any): ChangeModeC2AResponse {
+        return new ChangeModeC2AResponse();
+    }
+}
+
 //=- initiate code edit -=\\
 export class InitiateCodeEditA2CRequest extends Request {
     override readonly RESPONSE_CLASS = InitiateCodeEditC2AResponse;
@@ -246,6 +268,15 @@ export function sendRequest<T extends Request, Y extends Response>(request: T, c
     activeRequests.set(request.id,request);
     if (callback) request.responseCallbacks.push(callback);
     webSocket.send(request.serialize());
+}
+
+export async function sendRequestAsync<T extends Request, Y extends Response>(request: T): Promise<Y> {
+    let responseCallback;
+    let promise = new Promise<Y>((resolve, reject) => {
+        responseCallback = (request: T, response: Y) => resolve(response);
+    });
+    sendRequest(request, responseCallback)
+    return promise;
 }
 
 export function initialize(context: ExtensionContext) {
