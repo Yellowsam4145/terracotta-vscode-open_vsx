@@ -261,11 +261,12 @@ export async function tryConnection() {
                 case "response": {
                     let request = activeRequests.get(id);
                     if (!request) {throw new Error("Recieved response for an invalid request")}
-                    if (msgJson.success == false) {
+                    if (msgJson.success) {
+                        message = request.RESPONSE_CLASS.parse(msgJson);
+                    } else {
                         message = new ErrorResponse(msgJson.data.error_code, msgJson.data.error_message);
                     }
 
-                    message = request.RESPONSE_CLASS.parse(msgJson);
 
                     break messageParser;
                 }
