@@ -4,29 +4,34 @@ import { RawData, WebSocket } from "ws"
 import { isPortTaken } from "./util/util";
 
 enum MessageType {
-    Request = "request",
-    Response = "response",
-    Notification = "notification",
+    REQUEST = "REQUEST",
+    RESPONSE = "RESPONSE",
+    NOTIFICATION = "NOTIFICATION",
 }
 
 enum Permission {
-    EditCode = "EDIT_CODE",
-    ChangeMode = "CHANGE_MODE",
-    GetPlotInfo = "GET_PLOT_INFO"
+    EDIT_CODE = "EDIT_CODE",
+    CHANGE_MODE = "CHANGE_MODE",
+    GET_PLOT_INFO = "GET_PLOT_INFO"
 }
 
 enum RequestMethod {
-    RequestToken = "request_token",
-    ProvideToken = "provide_token",
-    InitiateCodeEdit = "initiate_code_edit",
+    REQUEST_TOKEN = "REQUEST_TOKEN",
+    PROVIDE_TOKEN = "PROVIDE_TOKEN",
+    INITIATE_CODE_EDIT = "INITIATE_CODE_EDIT",
+}
+
+enum NotificationMethod {
+    MODE_CHANGED = "MODE_CHANGED",
 }
 
 export enum TemplateType {
-    PlayerEvent = "PLAYER_EVENT",
-    EntityEvent = "ENTITY_EVENT",
-    Function = "FUNCTION",
-    Process = "PROCESS",
+    PLAYER_EVENT = "PLAYER_EVENT",
+    ENTITY_EVENT = "ENTITY_EVENT",
+    FUNCTION = "FUNCTION",
+    PROCESS = "PROCESS",
 }
+
 export interface TemplateIdentifier {
     type: TemplateType,
     name: string
@@ -62,7 +67,7 @@ export class Request extends Message {
 
     constructor(
         public method: string,
-    ) { super(MessageType.Request); }
+    ) { super(MessageType.REQUEST); }
 
     protected override buildOn(out: any) {
         super.buildOn(out);
@@ -73,7 +78,7 @@ export class Request extends Message {
 export class Response extends Message {
     success: boolean = true;
     constructor() {
-        super(MessageType.Response);
+        super(MessageType.RESPONSE);
     }
 
     static parse(msgJson: any) {
@@ -98,7 +103,7 @@ export class RequestTokenA2CRequest extends Request {
     constructor(
         public appName: string,
         public permissions: Permission[],
-    ) { super(RequestMethod.RequestToken); }
+    ) { super(RequestMethod.REQUEST_TOKEN); }
 
     protected override buildOn(out: any) {
         super.buildOn(out);
@@ -122,7 +127,7 @@ export class ProvideTokenA2CRequest extends Request {
 
     constructor(
         public token: string,
-    ) { super(RequestMethod.ProvideToken); }
+    ) { super(RequestMethod.PROVIDE_TOKEN); }
 
     protected override buildOn(out: any) {
         super.buildOn(out);
@@ -144,7 +149,7 @@ export class InitiateCodeEditA2CRequest extends Request {
     constructor(
         public placeTemplates: string[],
         public breakTemplates: TemplateIdentifier[],
-    ) { super(RequestMethod.InitiateCodeEdit); }
+    ) { super(RequestMethod.INITIATE_CODE_EDIT); }
 
     protected override buildOn(out: any) {
         super.buildOn(out);
@@ -182,7 +187,7 @@ function requestToken() {
     sendRequest(
         new RequestTokenA2CRequest(
             "terracotta",
-            [Permission.EditCode,Permission.ChangeMode,Permission.GetPlotInfo]
+            [Permission.EDIT_CODE,Permission.CHANGE_MODE,Permission.GET_PLOT_INFO]
         ), 
         async (request, response: RequestTokenC2AResponse) => {
             if (response instanceof ErrorResponse) {
@@ -258,7 +263,7 @@ export async function tryConnection() {
             let message: Message | undefined = undefined;
     
             messageParser: switch (msgJson.type) {
-                case "response": {
+                case MessageType.RESPONSE: {
                     let request = activeRequests.get(id);
                     if (!request) {throw new Error("Recieved response for an invalid request")}
                     if (msgJson.success) {
