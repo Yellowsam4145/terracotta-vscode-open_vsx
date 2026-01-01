@@ -215,11 +215,24 @@ export class ModeChangedC2ANotification extends Notification {
     }
 }
 
+export class PlotChangedC2ANotification extends Notification {
+    constructor(
+        public plotId: number,
+        public plotName: string,
+    ) { super(); }
+    
+    static override parse(msgJson: any): PlotChangedC2ANotification {
+        return new PlotChangedC2ANotification(msgJson.data.plot_id, msgJson.data.plot_name);
+    }
+}
+
 export let webSocket: WebSocket;
 
 export let isConnected: boolean = false;
 export let isAuthed: boolean = false;
 
+export let plotId: number = -1;
+export let plotName: string = "Unknown";
 export let mode: DFMode = DFMode.SPAWN;
 
 let extensionContext: ExtensionContext;
@@ -238,6 +251,10 @@ async function handleResponse(request: Request, response: Response) {
 async function handleNotification(notification: Notification) {
     if (notification instanceof ModeChangedC2ANotification) {
         mode = notification.newMode;
+    }
+    else if (notification instanceof PlotChangedC2ANotification) {
+        plotId = notification.plotId;
+        plotName = notification.plotName;
     }
 }
 
