@@ -5,9 +5,11 @@ import { RawData, WebSocket } from 'ws';
 import { LanguageClient, LanguageClientOptions, ServerOptions, StreamMessageReader } from 'vscode-languageclient/node';
 import { DebuggerExtraInfo } from "./debugger";
 import * as fs from "fs/promises"
+import * as os from "os"
 import { fileURLToPath, pathToFileURL, URL } from "url";
 import { Dict } from "./util/dict"
 import * as npc from "copy-paste"
+import * as crypto from "node:crypto"
 const stableStringify = require("json-stable-stringify")
 //why can't you just import like a normal????
 import * as NBTTypes from "nbtify"
@@ -1049,6 +1051,224 @@ async function startLanguageServer() {
 	})
 }
 
+// scopes: await CodeClient.getScopes(),
+// mode: await CodeClient.getMode(),
+// terracottaInstallPath: useSourceCode ? sourcePath : terracottaPath,
+// useSourceCode: useSourceCode,
+// rank: getConfigValue("rank"),
+
+async function buildToMinecraft(debugSession: vscode.DebugSession, launchArguments: any): Promise<void> {
+	function bluelog(message: string) {
+		console.log(message);
+		debugSession.customRequest("bluelog",message);
+	}
+	function log(message: string) {
+		console.log(message);
+		debugSession.customRequest("log",message);
+	}
+	function error(message: string) {
+		console.error(message);
+		debugSession.customRequest("error",message);
+	}
+	function end(exitCode: number) {
+		debugSession.customRequest("end",exitCode);
+	}
+	async function changeMode(mode: TCClient.DFMode) {
+		let modeChangeResponse = await TCClient.sendRequestAsync(new TCClient.ChangeModeA2CRequest(TCClient.DFMode.DEV));
+		if (modeChangeResponse instanceof TCClient.ErrorResponse) {
+			error(`Could not switch to ${mode.toLowerCase()} mode: ${modeChangeResponse.errorMessage}`)
+			end(1); return;
+		}
+	}
+
+	let terracottaInstallPath = useSourceCode ? sourcePath : terracottaPath;
+
+	let rank: string = getConfigValue("rank") ?? "Unranked";
+	if (rank === "") {
+		rank = "Unranked"
+	} else if (!rank.match(/^[a-zA-Z]+$/g)) {
+		rank = "overlord"
+	}
+
+	let plotSize = launchArguments.plotSize.toString()
+	if (!plotSize.match(/^[0-9.]+$/g)) {
+		plotSize = "300"
+	}
+
+	let folderUrl = launchArguments.folder;
+	let tcMetaFolderPath = path.join(folderUrl,".terracotta");
+	let hashFilePath = path.join(tcMetaFolderPath,"templateHash");
+	let newHashFilePath = path.join(tcMetaFolderPath,"newTemplateHash");
+
+	//create .terracotta folder if it doesnt already exist
+	try {
+		await fs.stat(tcMetaFolderPath)
+	} catch (e: any) {
+		if (e.code == "ENOENT") {
+			await fs.mkdir(tcMetaFolderPath)
+		} else {
+			error(`Could not access .terracotta folder (error code:${e.errno})`);
+			end(1); return;
+		}
+	}
+
+	// compile the project and get resulting templates
+	let templates: Dict<any>
+	try {
+		let command: string 
+		if (useSourceCode) {
+			command = `cd "${terracottaInstallPath}"; ~/.deno/bin/deno run --allow-read --allow-env "${terracottaInstallPath}src/main.ts"`
+		} else {
+			if (process.platform == "win32") {
+				command = `"${terracottaInstallPath.replaceAll('"','\\"')}"`
+			} else {
+				command = `"${terracottaInstallPath.replaceAll("\\","\\\\").replaceAll('"','\\"')}"`
+			}
+		}
+		command += ` compile --project "${launchArguments.folder}" --includemeta --plotsize ${plotSize} --rank ${rank}`
+		bluelog("Compiling using command:\n"+command+"\n");
+		templates = JSON.parse(cp.execSync(command,{cwd: os.homedir()}).toString())
+	}
+	catch (e: any) {
+		for (const message of e.output[2].toString().split("\n\n")) {
+			error(message+'\n');
+		}
+		end(1); return;
+	}
+
+	//= figure out what templates should be changed =\\
+	let seenTemplates: Dict<Set<string>> = {
+		functions: new Set<string>(),
+		processes: new Set<string>(),
+		playerEvents: new Set<string>(),
+		entityEvents: new Set<string>(),
+	}
+
+	let oldTemplatesHashes: Dict<Dict<string>> = {
+		functions: {},
+		processes: {},
+		playerEvents: {},
+		entityEvents: {},
+	}
+	
+	//read hashes of the last compilation
+	let fileContents: string | undefined = undefined
+	try {
+		fileContents = (await fs.readFile(hashFilePath)).toString()
+	} catch (e) {}
+	if (fileContents) {
+		let headerType: string | undefined = undefined
+		fileContents.split("\n").forEach(line => {
+			//lines denoting change in header type
+			if (line.startsWith(">")) {
+				headerType = line.substring(1)
+				if (!(headerType in oldTemplatesHashes)) {headerType = undefined}
+			}
+			//lines for templates
+			else if (headerType) {
+				let [hash, name] = line.split(/ (.*)/)
+				seenTemplates[headerType]!.add(name)
+				oldTemplatesHashes[headerType]![name] = hash
+			}
+		})
+	}
+
+
+	let newHashFileContents: string = ""
+	let placeTemplates: string[] = []
+	let breakTemplates: TCClient.TemplateIdentifier[] = [];
+	let changedTemplateCount: number = 0
+
+	;["functions","processes","playerEvents","entityEvents"].forEach(headerFileType => {
+		const headerTemplateType: TCClient.TemplateType = 
+			headerFileType == "functions" ? TCClient.TemplateType.FUNCTION : 
+			headerFileType == "processes" ? TCClient.TemplateType.PROCESS : 
+			headerFileType == "playerEvents" ? TCClient.TemplateType.PLAYER_EVENT :
+			TCClient.TemplateType.ENTITY_EVENT
+		let hashes: Dict<string> = {}
+
+		//get hashes of new templates
+		newHashFileContents += ">"+headerFileType+"\n"
+		for (const [name, template] of Object.entries(templates[headerFileType]) as [string,string][]) {
+			let hash = crypto.createHash('md5').update(template).digest("hex")
+
+			seenTemplates[headerFileType]!.add(name)
+			hashes[name] = hash
+			
+			newHashFileContents += hash+" "+name+"\n"
+		}
+
+		//create codeclient commands
+		seenTemplates[headerFileType]!.forEach(templateName => {
+			if (templateName === undefined) { return; }
+			// if template needs to be broken
+			if (!(templateName in hashes)) {
+				console.log(headerTemplateType, templateName)
+				breakTemplates.push({type: headerTemplateType, name: templateName})
+				changedTemplateCount += 1;
+			}
+			//if template is new or has changed
+			else if (
+				!(templateName in oldTemplatesHashes[headerFileType]!) || 
+				(hashes[templateName] != oldTemplatesHashes[headerFileType]![templateName])
+			) {
+				placeTemplates.push(templates[headerFileType][templateName]);
+				changedTemplateCount += 1;
+			}
+		})
+	})
+
+	await fs.writeFile(newHashFilePath,newHashFileContents,"utf-8")
+
+	//= actually send to the placer =\\
+	if (changedTemplateCount == 0) {
+		log(`No template changes detected since last compilation`);		
+		await fs.rename(newHashFilePath,hashFilePath)
+		end(0); return;
+		// if (launchArguments.autoSwitchToPlay) {
+		// 	await changeMode(TCClient.DFMode.PLAY);
+		// }
+	}
+
+	// make sure minecraft state is correct
+	if (!TCClient.isConnected) {
+		log(`Terracotta Client is not connected. If Minecraft is actually running, try 'Refresh Client Connection' from the Command Pallette.`)
+		end(1); return;
+	}
+	if (!TCClient.isAuthed) {
+		log("Terracotta is not authorized to make changes, please allow it in your Minecraft client.");
+		end(1); return;
+	}
+	if (TCClient.mode == TCClient.DFMode.SPAWN) {
+		log("Terracotta cannot build to a plot from spawn, please join a plot.");
+		end(1); return;
+	}
+	if (TCClient.mode != TCClient.DFMode.DEV) {
+		if (launchArguments.autoSwitchToDev) {
+			log(`Switching to dev mode (currently in ${TCClient.mode.toLowerCase()})`);
+			await changeMode(TCClient.DFMode.DEV);  //- TEST
+		} else {
+			log(`You are currently in ${TCClient.mode} mode. Please switch to dev or add '"autoSwitchToDev": true' to your launch configuration.`);
+			end(1); return;
+		}
+	}
+
+	log("Starting to place code...");
+	let placeResponse = await TCClient.sendRequestAsync(new TCClient.InitiateCodeEditA2CRequest(placeTemplates,breakTemplates));
+	if (placeResponse instanceof TCClient.ErrorResponse) {
+		error(`Failed to place code: ${placeResponse.errorMessage}`);
+		end(1); return;
+	}
+
+	await fs.rename(newHashFilePath,hashFilePath)
+
+	log(`Code placing complete! ${launchArguments.autoSwitchToPlay ? "Automatically switching to play mode" : ""}\n`);
+	if (launchArguments.autoSwitchToPlay) {
+		TCClient.sendRequest(new TCClient.ChangeModeA2CRequest(TCClient.DFMode.PLAY));
+	}
+	end(0); return;
+}
+
 //==========[ extension events ]=========\
 
 export function activate(context: vscode.ExtensionContext) {
@@ -1612,6 +1832,12 @@ export function activate(context: vscode.ExtensionContext) {
 		if (event.event == "log") {
 			console.log(event.body)
 		}
+		else if (event.event == "sendLaunchArgs") {
+			let launchArgs = event.body;
+			if (launchArgs.exportMode == "sendToCodeClient" || launchArgs.exportMode == "sendToMinecraft") {
+				buildToMinecraft(event.session, launchArgs);
+			}
+		}
 		else if (event.event == "showErrorMessage") {
 			vscode.window.showErrorMessage(event.body)
 		}
@@ -1626,7 +1852,8 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	})
 
-	vscode.debug.onDidStartDebugSession(session => {
+	vscode.debug.onDidStartDebugSession(async session => {
+		// console.log(launchArgs);
 		debuggers[session.id] = session
 		stopEditingAllItems()
 	})

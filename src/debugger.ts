@@ -61,6 +61,7 @@ const requestHandlers: {[key: string]: (args: dap.Request) => void} = {
     },
     "launch": async function(request) {
         sendResponse(request,{})
+        sendEvent("sendLaunchArgs",request.arguments);
         
         if (request.arguments.exportMode == "sendToCodeClient") {
             launchArguments = request.arguments
@@ -132,10 +133,6 @@ const requestHandlers: {[key: string]: (args: dap.Request) => void} = {
                 templates = JSON.parse(cp.execSync(command,{cwd: os.homedir()}).toString())
             }
             catch (e: any) {
-                // sendEvent('output',{
-                //     output: "Error:" + JSON.stringify(e) + e.toString(),
-                //     category: "stderr",
-                // })
                 for (const message of e.output[2].toString().split("\n\n")) {
                     sendEvent('output',{
                         output: message+'\n\n',
@@ -337,6 +334,34 @@ const requestHandlers: {[key: string]: (args: dap.Request) => void} = {
             isInDevResolve(null)
             isInDevResolve = undefined
         }
+    },
+    "getLaunchArgs": function(request) {
+        sendResponse(request,launchArguments,true);
+    },
+    "log": function(request) {
+        sendEvent('output',{
+            output: request.arguments+"\n",
+            category: "console",
+        })
+        sendResponse(request,{});
+    },
+    "bluelog": function(request) {
+        sendEvent('output',{
+            output: request.arguments+"\n",
+            category: "stdout",
+        })
+        sendResponse(request,{});
+    },
+    "error": function(request) {
+        sendEvent('output',{
+            output: request.arguments+"\n",
+            category: "stderr",
+        })
+        sendResponse(request,{});
+    },
+    "end": function(request) {
+        setTimeout(() => process.exit(request.arguments), 100);
+        sendResponse(request,{});
     }
 }
 

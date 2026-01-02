@@ -411,14 +411,13 @@
 								"type": "string",
 								"description": "What to do with the compiled code templates",
 								"enum": [
-									"sendToCodeClient",
-									"saveToFiles"
+									"sendToMinecraft"
 								],
 								"enumDescriptions": [
 									"Uses codeclient's placer to automatically add code to a plot",
 									"Saves code templates to files"
 								],
-								"default": "sendToCodeClient"
+								"default": "sendToMinecraft"
 							},
 							"autoSwitchToDev": {
 								"type": "boolean",
