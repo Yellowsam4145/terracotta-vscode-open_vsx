@@ -25,6 +25,8 @@ enum RequestMethod {
 
 enum NotificationMethod {
     MODE_CHANGED = "MODE_CHANGED",
+    ITEM_CHANGED = "ITEM_CHANGED",
+    STOP_EDITING_ITEM = "STOP_EDITING_ITEM",
 }
 
 export enum DFMode {
@@ -256,6 +258,33 @@ export class PlotChangedC2ANotification extends Notification {
     }
 }
 
+export class ItemChangedC2ANotification extends Notification {
+    constructor(
+        public workspacePath: string,
+        public libraryId: string,
+        public itemId: string,
+        public snbt: string
+    ) { super(); }
+    
+    static override parse(msgJson: any): ItemChangedC2ANotification {
+        return new ItemChangedC2ANotification(msgJson.data.workspace_path, msgJson.data.library_id, msgJson.data.item_id, msgJson.data.snbt);
+    }
+}
+
+export class StopEditingItemC2ANotification extends Notification {
+    constructor(
+        public workspacePath: string,
+        public libraryId: string,
+        public itemId: string
+    ) { super(); }
+    
+    static override parse(msgJson: any): StopEditingItemC2ANotification {
+        return new StopEditingItemC2ANotification(msgJson.data.workspace_path, msgJson.data.library_id, msgJson.data.item_id);
+    }
+}
+
+type NotificationCallback = (notif: Notification) => void;
+
 export let webSocket: WebSocket;
 
 export let isConnected: boolean = false;
@@ -271,6 +300,7 @@ let providedToken: string | undefined = undefined;
 
 /** key: id */
 const activeRequests: Map<number, Request> = new Map();
+const notificationCallbacks: Set<NotificationCallback> = new Set();
 
 async function handleResponse(request: Request, response: Response) {
     for (const callback of request.responseCallbacks) {
@@ -285,6 +315,9 @@ async function handleNotification(notification: Notification) {
     else if (notification instanceof PlotChangedC2ANotification) {
         plotId = notification.plotId;
         plotName = notification.plotName;
+    }
+    for (const callback of notificationCallbacks) {
+        callback(notification);
     }
 }
 
@@ -324,6 +357,10 @@ export async function sendRequestAsync<T extends Request, Y extends Response>(re
     });
     sendRequest(request, responseCallback)
     return promise;
+}
+
+export async function onNotification(callback: NotificationCallback) {
+    notificationCallbacks.add(callback);
 }
 
 export function initialize(context: ExtensionContext) {
@@ -393,6 +430,8 @@ export async function tryConnection() {
                     let notificationClass;
                     switch (msgJson.method) {
                         case NotificationMethod.MODE_CHANGED: { notificationClass = ModeChangedC2ANotification; break }
+                        case NotificationMethod.ITEM_CHANGED: { notificationClass = ItemChangedC2ANotification; break }
+                        case NotificationMethod.STOP_EDITING_ITEM: { notificationClass = StopEditingItemC2ANotification; break }
                         default: throw new Error(`Received notification for unknown method ${msgJson.method}`)
                     }
                     message = notificationClass?.parse(msgJson);

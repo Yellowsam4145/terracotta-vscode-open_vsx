@@ -244,7 +244,7 @@ async function updateLibrary(fileURL: URL, projectURL: URL) {
 
 			delete itemLibraries[projectString]![entry.id]
 			delete urlStringToLibMap[fileString]
-			stopEditing(projectString,entry.id)
+			stopEditingLocally(projectString,entry.id)
 		}
 		itemEditorProvider.refresh()
 	}
@@ -279,7 +279,7 @@ async function updateLibrary(fileURL: URL, projectURL: URL) {
 	if (fileURL.toString() in urlStringToLibMap && urlStringToLibMap[fileURL.toString()]?.id != parsed.id) {
 		let oldId = urlStringToLibMap[fileURL.toString()]!.id
 		delete itemLibraries[projectURL.toString()]![oldId]
-		stopEditing(projectURL.toString(),oldId)
+		stopEditingLocally(projectURL.toString(),oldId)
 	}
 
 	//error for if there is already a library with this id
@@ -302,7 +302,7 @@ async function updateLibrary(fileURL: URL, projectURL: URL) {
 	if (itemsBeingEdited[projectURL.toString()]?.[parsed.id]) {
 		for (const itemId of Object.keys(itemsBeingEdited[projectURL.toString()]![parsed.id]!)) {
 			if (!(itemId in seenItemIds)) {
-				stopEditing(projectURL.toString(),parsed.id,itemId)
+				stopEditingLocally(projectURL.toString(),parsed.id,itemId)
 			}
 		}
 	}
@@ -393,7 +393,7 @@ function parseMaterial(value: string): any {
 }
 
 //leave itemId blank to stop editing an entire library
-function stopEditing(project: string, libraryId: string, itemId: string | undefined = undefined) {
+function stopEditingLocally(project: string, libraryId: string, itemId: string | undefined = undefined) {
 	if (itemsBeingEdited[project]?.[libraryId]) {
 
 		//remove item
@@ -422,7 +422,7 @@ function stopEditingAllItems() {
 	// when switching out of dev mode, stop editing all items
 	for (const [project, libraries] of Object.entries(itemsBeingEdited)) {
 		for (const libraryId of Object.keys(libraries!)) {
-			stopEditing(project,libraryId)
+			stopEditingLocally(project,libraryId)
 		}
 	}
 	itemEditorProvider.refresh()
@@ -469,38 +469,11 @@ function validateItemData(item: any) {
  * modifying item data and adding it to the internal library structure
  * @param item this item's data will NOT be modified
  */
-function addItemDataToLibrary(library: ItemLibraryFile, itemId: string, item: any) {
-	item = NBT.parse(NBT.stringify(item))
-
-	//remove fields that don't need to be saved
-	let customData = item.components?.["minecraft:custom_data"]
-	if (customData) {
-		if ("terracottaEditorItem" in customData) {
-			delete customData.terracottaEditorItem
-		}
-		if ("PublicBukkitValues" in customData) {
-			if ("hypercube:__tc_ii_import" in customData.PublicBukkitValues) {
-				delete customData.PublicBukkitValues["hypercube:__tc_ii_import"]
-			}
-			if (Object.keys(customData.PublicBukkitValues).length == 0) {
-				delete customData.PublicBukkitValues
-			}
-		}
-
-		if (Object.keys(customData).length == 0) {
-			delete item.components["minecraft:custom_data"]
-		}
-	}
-	if (!item.id.startsWith("minecraft:")) {
-		item.id = "minecraft:" + item.id
-	}
-	delete item.count
-	delete item.Slot
-
+function addItemDataToLibrary(library: ItemLibraryFile, itemId: string, snbt: string) {
 	//add new data to library
 	library.items[itemId] = {
 		version: DF_NBT,
-		data: NBT.stringify(item)
+		data: snbt
 	}
 }
 
@@ -605,6 +578,27 @@ async function startItemLibraryEditor(context: vscode.ExtensionContext) {
 	}
 	areLibrariesLoaded = true
 	itemEditorProvider.refresh()
+
+	//= tcclient integration =\\
+	TCClient.onNotification(async notif => {
+		if (notif instanceof TCClient.StopEditingItemC2ANotification) {
+			stopEditingLocally(notif.workspacePath,notif.libraryId,notif.itemId)
+			itemEditorProvider.refresh();
+		}
+		else if (notif instanceof TCClient.ItemChangedC2ANotification) {
+			let library = itemLibraries[notif.workspacePath]![notif.libraryId]!
+			try {
+				addItemDataToLibrary(library, notif.itemId, notif.snbt)
+			} catch (e) {
+				vscode.window.showErrorMessage("Could not add item", {
+					modal: true,
+					detail: `${e}`
+				})
+			}
+
+			await saveLibrary(library)
+		}
+	})
 	
 	//= commmands =\\
 	vscode.commands.registerCommand("extension.terracotta.itemEditor.showMigrationInfo",async (treeItem: ItemTreeItem) => {
@@ -726,31 +720,8 @@ async function startItemLibraryEditor(context: vscode.ExtensionContext) {
 	vscode.commands.registerCommand("extension.terracotta.itemEditor.stopEditingItem",async (treeItem: ItemTreeItem) => {
 		//remove from currently editing list
 		let projectUrlString = treeItem.library.projectURL.toString()
-		stopEditing(projectUrlString,treeItem.library.id,treeItem.itemId)
+		stopEditingLocally(projectUrlString,treeItem.library.id,treeItem.itemId)
 		itemEditorProvider.refresh()
-
-		//queue removal from minecraft inventory
-		let indiciesToRemove: number[] = []
-		let inventory = await CodeClient.getInventory()
-
-		let i = -1;
-		for (const item of inventory) {
-			i++
-			let editorData = item.components?.["minecraft:custom_data"]?.terracottaEditorItem
-			if (editorData && "itemid" in editorData && "libid" in editorData && "project" in editorData){
-				if (
-					editorData["itemid"]  == treeItem.itemId &&
-					editorData["libid"]   == treeItem.library.id &&
-					editorData["project"] == treeItem.library.projectURL.toString()
-				) {
-					indiciesToRemove.unshift(i)
-				}
-			}
-		}
-		CodeClient.queueInvIndiciesForClear(indiciesToRemove)
-
-		//save latest changes
-		await CodeClient.heartbeat()
 	})
 
 	vscode.commands.registerCommand("extension.terracotta.itemEditor.importItemToLibrary",async (treeItem: LibraryTreeItem) => {
@@ -1437,7 +1408,7 @@ export function activate(context: vscode.ExtensionContext) {
 				for (const itemId of Object.keys(items!)) {
 					if (!editingItemsInInventory[project]?.[libraryId]?.[itemId]) {
 						itemsWereRemoved = true
-						stopEditing(project, libraryId, itemId)
+						stopEditingLocally(project, libraryId, itemId)
 					}
 				}
 			}
