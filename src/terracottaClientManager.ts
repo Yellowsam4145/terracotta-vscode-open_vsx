@@ -20,6 +20,7 @@ enum RequestMethod {
     PROVIDE_TOKEN = "PROVIDE_TOKEN",
     INITIATE_CODE_EDIT = "INITIATE_CODE_EDIT",
     CHANGE_MODE = "CHANGE_MODE",
+    START_EDITING_ITEM = "START_EDITING_ITEM",
 }
 
 enum NotificationMethod {
@@ -201,6 +202,35 @@ export class InitiateCodeEditC2AResponse extends Response {
 
     static override parse(msgJson: any): InitiateCodeEditC2AResponse {
         return new InitiateCodeEditC2AResponse();
+    }
+}
+
+//=- start editing item -=\\
+export class StartEditingItemA2CRequest extends Request {
+    override readonly RESPONSE_CLASS = StartEditingItemA2CResponse;
+
+    constructor(
+        public workspacePath: string,
+        public libraryId: string,
+        public itemId: string,
+        public snbt: string,
+        public dataVersion: number,
+    ) { super(RequestMethod.START_EDITING_ITEM); }
+
+    protected override buildOn(out: any) {
+        super.buildOn(out);
+        out.data.workspace_path = this.workspacePath;
+        out.data.library_id = this.libraryId;
+        out.data.item_id = this.itemId;
+        out.data.snbt = this.snbt;
+        out.data.data_version = this.dataVersion;
+    }
+}
+export class StartEditingItemA2CResponse extends Response {
+    constructor() { super(); }
+
+    static override parse(msgJson: any): StartEditingItemA2CResponse {
+        return new StartEditingItemA2CResponse();
     }
 }
 

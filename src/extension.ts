@@ -707,28 +707,19 @@ async function startItemLibraryEditor(context: vscode.ExtensionContext) {
 	})
 
 	vscode.commands.registerCommand("extension.terracotta.itemEditor.startEditingItem",async (treeItem: ItemTreeItem) => {
-		if (!await requireCodeClientConnection("Item cannot be edited","code")) {return}
+		// if (!await requireCodeClientConnection("Item cannot be edited","code")) {return}
 
 		let projectUrlString = treeItem.library.projectURL.toString()
 		ensurePathExistance(itemsBeingEdited,projectUrlString,treeItem.library.id)[treeItem.itemId] = true
 
-
-		let parsed: any
-		try {
-			parsed = NBT.parse(treeItem.library.items[treeItem.itemId].data)
-		} catch (e) {
-			vscode.window.showErrorMessage(`Could not edit item ${treeItem.itemId} because its data its invalid: ${e}`)
-			return
-		}
-
-		//prepare item to be sent
-		parsed.Count = new NBT.Int8(1)
-		let editorData = ensurePathExistance(parsed,"components","minecraft:custom_data","terracottaEditorItem")
-		editorData["itemid"]  = treeItem.itemId,
-		editorData["libid"]   = treeItem.library.id,
-		editorData["project"] = treeItem.library.projectURL.toString(),
-
-		CodeClient.sendMessage(`give ${NBT.stringify(parsed)}`)
+		// CodeClient.sendMessage(`give ${NBT.stringify(parsed)}`)
+		TCClient.sendRequest(new TCClient.StartEditingItemA2CRequest(
+			treeItem.library.projectURL.toString(),
+			treeItem.library.id,
+			treeItem.itemId,
+			treeItem.library.items[treeItem.itemId].data,
+			5 // TODO: THIS DOESNT WORK!!
+		));
 		itemEditorProvider.refresh()
 	})
 
@@ -736,6 +727,7 @@ async function startItemLibraryEditor(context: vscode.ExtensionContext) {
 		//remove from currently editing list
 		let projectUrlString = treeItem.library.projectURL.toString()
 		stopEditing(projectUrlString,treeItem.library.id,treeItem.itemId)
+		itemEditorProvider.refresh()
 
 		//queue removal from minecraft inventory
 		let indiciesToRemove: number[] = []
