@@ -718,10 +718,11 @@ async function startItemLibraryEditor(context: vscode.ExtensionContext) {
 	})
 
 	vscode.commands.registerCommand("extension.terracotta.itemEditor.stopEditingItem",async (treeItem: ItemTreeItem) => {
-		//remove from currently editing list
 		let projectUrlString = treeItem.library.projectURL.toString()
-		stopEditingLocally(projectUrlString,treeItem.library.id,treeItem.itemId)
-		itemEditorProvider.refresh()
+		stopEditingLocally(projectUrlString,treeItem.library.id,treeItem.itemId);
+		TCClient.sendRequest(
+			new TCClient.StopEditingItemA2CRequest(projectUrlString,treeItem.library.id,treeItem.itemId)
+		);
 	})
 
 	vscode.commands.registerCommand("extension.terracotta.itemEditor.importItemToLibrary",async (treeItem: LibraryTreeItem) => {

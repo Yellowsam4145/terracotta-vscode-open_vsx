@@ -21,6 +21,7 @@ enum RequestMethod {
     INITIATE_CODE_EDIT = "INITIATE_CODE_EDIT",
     CHANGE_MODE = "CHANGE_MODE",
     START_EDITING_ITEM = "START_EDITING_ITEM",
+    STOP_EDITING_ITEM = "STOP_EDITING_ITEM",
 }
 
 enum NotificationMethod {
@@ -233,6 +234,31 @@ export class StartEditingItemA2CResponse extends Response {
 
     static override parse(msgJson: any): StartEditingItemA2CResponse {
         return new StartEditingItemA2CResponse();
+    }
+}
+
+//=- stop editing item -=\\
+export class StopEditingItemA2CRequest extends Request {
+    override readonly RESPONSE_CLASS = StopEditingItemC2AResponse;
+
+    constructor(
+        public workspacePath: string,
+        public libraryId: string,
+        public itemId: string,
+    ) { super(RequestMethod.STOP_EDITING_ITEM); }
+
+    protected override buildOn(out: any) {
+        super.buildOn(out);
+        out.data.workspace_path = this.workspacePath;
+        out.data.library_id = this.libraryId;
+        out.data.item_id = this.itemId;
+    }
+} 
+export class StopEditingItemC2AResponse extends Response {
+    constructor() {super(); }
+
+    static override parse(msgJson: any): StopEditingItemC2AResponse {
+        return new StopEditingItemC2AResponse();
     }
 }
 
