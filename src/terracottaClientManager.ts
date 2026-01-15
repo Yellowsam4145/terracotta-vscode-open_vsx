@@ -22,6 +22,7 @@ enum RequestMethod {
     CHANGE_MODE = "CHANGE_MODE",
     START_EDITING_ITEM = "START_EDITING_ITEM",
     STOP_EDITING_ITEM = "STOP_EDITING_ITEM",
+    GIVE_ITEM = "GIVE_ITEM",
 }
 
 enum NotificationMethod {
@@ -259,6 +260,29 @@ export class StopEditingItemC2AResponse extends Response {
 
     static override parse(msgJson: any): StopEditingItemC2AResponse {
         return new StopEditingItemC2AResponse();
+    }
+}
+
+//=- give item -=\\
+export class GiveItemA2CRequest extends Request {
+    override readonly RESPONSE_CLASS = GiveItemA2CResponse;
+
+    constructor(
+        public snbt: string,
+        public dataVersion: number,
+    ) { super(RequestMethod.GIVE_ITEM); }
+
+    protected override buildOn(out: any) {
+        super.buildOn(out);
+        out.data.snbt = this.snbt;
+        out.data.data_version = this.dataVersion;
+    }
+}
+export class GiveItemA2CResponse extends Response {
+    constructor() { super(); }
+
+    static override parse(msgJson: any): GiveItemA2CResponse {
+        return new GiveItemA2CResponse();
     }
 }
 

@@ -619,11 +619,12 @@ async function startItemLibraryEditor(context: vscode.ExtensionContext) {
 	})
 
 	vscode.commands.registerCommand("extension.terracotta.itemEditor.giveStaticCopy",async (treeItem: ItemTreeItem) => {
-		if (!await requireCodeClientConnection("Item cannot be given","code")) {return}
+		// if (!await requireCodeClientConnection("Item cannot be given","code")) {return}
 
-		let item = NBT.parse(treeItem.library.items[treeItem.itemId].data) as any
-		item.Count = new NBT.Int8(1)
-		CodeClient.sendMessage(`give ${NBT.stringify(item)}`)
+		TCClient.sendRequest(new TCClient.GiveItemA2CRequest(
+			treeItem.library.items[treeItem.itemId].data,
+			treeItem.library.items[treeItem.itemId].version)
+		);
 	})
 
 	vscode.commands.registerCommand("extension.terracotta.itemEditor.delete",async (treeItem: vscode.TreeItem) => {
