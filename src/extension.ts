@@ -167,33 +167,33 @@ export class ItemLibraryEditorProvider implements vscode.TreeDataProvider<vscode
 						item.description = "(editing)"
 					}
 
-					//parse item data
-					let parsedData: NBTTypes.RootTagLike | undefined
-					try {
-						parsedData = NBT.parse(data.data)
-					} catch {}
+					// parse item data
+					// let parsedData: NBTTypes.RootTagLike | undefined
+					// try {
+					// 	parsedData = NBT.parse(data.data)
+					// } catch {}
 
-					//display as an error if the item data is malformed
-					if (!parsedData || !("version" in data) || !("id" in parsedData) || !(typeof parsedData.id === 'string' || parsedData.id instanceof String)) {
-						item.contextValue = "invalidItem",
-						item.description  = "ERROR ❌"
-						item.iconPath = vscode.Uri.joinPath(this.context.extensionUri,"/assets/icons/invalid_item.svg")
-					} 
-					else {
-						//handle different data versions
-						if (data.version != DF_NBT) {
-							item.contextValue = "outdatedItem"
-							item.description = "(needs migration)"
-						}
-						//if item is completely valid, set icon info based on parsed item id
-						let itemId = parsedData.id as string
-						if (itemId.startsWith("minecraft:")) {
-							itemId = itemId.substring("minecraft:".length)
-						}
-						if (itemId in itemIcons) {
-							item.iconPath = vscode.Uri.parse(itemIcons[itemId]!)
-						}
-					}
+					// //display as an error if the item data is malformed
+					// if (!parsedData || !("version" in data) || !("id" in parsedData) || !(typeof parsedData.id === 'string' || parsedData.id instanceof String)) {
+					// 	item.contextValue = "invalidItem",
+					// 	item.description  = "ERROR ❌"
+					// 	item.iconPath = vscode.Uri.joinPath(this.context.extensionUri,"/assets/icons/invalid_item.svg")
+					// } 
+					// else {
+					// 	//handle different data versions
+					// 	if (data.version != DF_NBT) {
+					// 		item.contextValue = "outdatedItem"
+					// 		item.description = "(needs migration)"
+					// 	}
+					// 	//if item is completely valid, set icon info based on parsed item id
+					// 	let itemId = parsedData.id as string
+					// 	if (itemId.startsWith("minecraft:")) {
+					// 		itemId = itemId.substring("minecraft:".length)
+					// 	}
+					// 	if (itemId in itemIcons) {
+					// 		item.iconPath = vscode.Uri.parse(itemIcons[itemId]!)
+					// 	}
+					// }
 					
 					items.push(item)
 
@@ -429,13 +429,13 @@ function stopEditingAllItems() {
 }
 
 //if it returns a string, that means the item id is invalid
-function validateItemId(itemId: string, library: ItemLibraryFile): string | true {
+function validateItemId(itemId: string, library: ItemLibraryFile, extraTakenIds?: string[]): string | true {
 	let regexResult = [...itemId.matchAll(/^[a-z0-9_\-./]*([^a-z0-9_\-./]|$)/g)]
 	if (regexResult[0][1]) {
 		return `Invalid character for item id: '${regexResult[0][1]}' (valid characters are lowercase 'a-z', '0-9', '/', '.', '_', and '-')`
 	}
 	
-	if (itemId in library.items) {
+	if (itemId in library.items || (extraTakenIds != undefined && extraTakenIds.includes(itemId))) {
 		return `Item with id '${itemId}' already exists in library '${library.id}'`
 	}
 
@@ -727,122 +727,184 @@ async function startItemLibraryEditor(context: vscode.ExtensionContext) {
 	})
 
 	vscode.commands.registerCommand("extension.terracotta.itemEditor.importItemToLibrary",async (treeItem: LibraryTreeItem) => {
-		if (!await requireCodeClientConnection("Items cannot be imported","code")) {return}
+		// if (!await requireCodeClientConnection("Items cannot be imported","code")) {return}
 
-		let thisImportId = Math.floor(Math.random()*1000000)
-		let itemRecieved = false
-		itemImportId = thisImportId
+		let invResponse: TCClient.GetInventoryA2CResponse = await TCClient.sendRequestAsync(new TCClient.GetInventoryA2CRequest());
+		let qp = vscode.window.createQuickPick();
+		let qpItemSnbts: Map<vscode.QuickPickItem, string> = new Map();
+		let qpItemLibIds: Map<vscode.QuickPickItem, string> = new Map();
 
-		let itemDataPromise = new Promise<any | null>(resolve => {
-			//if there was a previously active item data promise, kill it
-			if (returnItemBeingImported) { returnItemBeingImported(null) }
+		let activeItems: readonly vscode.QuickPickItem[] = [];
 
-			//shoving resolve functions out into the rest of the code is definitely a good idea
-			returnItemBeingImported = resolve
-		})
+		let renderedSeperators: Set<string> = new Set();
 
-		//show command window
-		let qp = vscode.window.createQuickPick()
-		itemImportQuickPick = qp
-		qp.items = [
-			{
-				label: "In Minecraft, hold the desired item and run the above command",
-				alwaysShow: true,
-				kind: vscode.QuickPickItemKind.Default,
+		let importSeperator: vscode.QuickPickItem = {label: "[Click to finalize import]", kind: vscode.QuickPickItemKind.Separator};
+		let importButton: vscode.QuickPickItem = {label: "", alwaysShow: true};
+		let qpItems: vscode.QuickPickItem[] = [importSeperator,importButton];
+		for (const [slotStringified, item] of Object.entries(invResponse.items)) {
+			let slot = Number(slotStringified);
+			let category = (
+				slot < 9 ? "Hotbar" :
+				slot < 36 ? "Inventory" :
+				slot < 40 ? "Armor" :
+				"Offhand"
+			)
+			if (!renderedSeperators.has(category)) {
+				qpItems.push({
+					label: "from "+category,
+					kind: vscode.QuickPickItemKind.Separator,
+				})
+				renderedSeperators.add(category);
 			}
-		]
-		qp.value = `/i tag set __tc_ii_import ${itemImportId}`
-		qp.enabled = false
-		qp.ignoreFocusOut = true
-		qp.busy = true
-		qp.title = "Import Item from Minecraft"
-		qp.selectedItems = []
-		qp.activeItems = []
-		qp.onDidHide(() => {
-			if (itemRecieved === false) {
-				itemImportId = undefined
-				//cancel item resolve promise
-				if (returnItemBeingImported) { returnItemBeingImported(null) }
+
+			let qpItem: vscode.QuickPickItem = {
+				label: item.name,
+			};
+			qpItems.push(qpItem);
+			qpItemSnbts.set(qpItem, item.snbt);
+		}
+		function showMainQp() {
+			//update import button
+			if (qpItemLibIds.size > 0) {
+				importButton.label = `$(pass-filled) Import ${qpItemLibIds.size} item${qpItemLibIds.size == 1 ? "" : "s"} into library '${treeItem.library.id}'`
+				importButton.kind = vscode.QuickPickItemKind.Default;
+			} else {
+				importButton.kind = vscode.QuickPickItemKind.Separator;
 			}
-			qp.dispose()
-		})
-		qp.show()
-
-		//wait for item to be imported
-		let itemData = await itemDataPromise
-		//make sure item is existant and valid
-		if (itemData == null) { 
-			qp.dispose()
-			return 
+			//actually show the thing
+			qp.items = qpItems;
+			qp.show();
+			qp.activeItems = activeItems;
 		}
-		let validation = validateItemData(itemData)
-		if (validation !== true) {
-			vscode.window.showErrorMessage("Item cannot be imported",{
-				modal: true,
-				detail: `${validation}`
-			})
-			qp.dispose()
-			return
+		function updateQpItem(item: vscode.QuickPickItem) {
+			let libId = qpItemLibIds.get(item);
+			if (libId !== undefined) {
+				item.detail = `Importing with id: '${libId}' (click to edit)`;
+				item.description = "$(check)";
+				item.buttons = [{iconPath: new vscode.ThemeIcon("close"), tooltip: "Don't import item"}];
+			} else {
+				item.detail = ``;
+				item.description = "";
+				item.buttons = [];
+			}
 		}
+		function generateItemId(itemName: string) {
+			let initialItemId = itemName.toLowerCase().replaceAll(/[^a-z0-9/._\- ]+/g,"").trim().replaceAll(" ","_");
+			let existingIds = [...Object.keys(treeItem.library.items),...qpItemLibIds.values()];
+			if (existingIds.includes(initialItemId)) {
+				let num = 1;
+				while (true) {
+					num++;
+					let itemId = initialItemId+"_"+num;
+					if (!existingIds.includes(itemId)) return itemId;
+				}
+			} else {
+				return initialItemId;
+			}
+		}
+		qp.title = `Import Items from Inventory into '${treeItem.library.id}'`;
+		qp.ignoreFocusOut = true;
+		qp.placeholder = "Type to search inventory items, click items to import them";
+		let addAllButton: vscode.QuickInputButton = {
+			iconPath: new vscode.ThemeIcon("tasklist"),
+			tooltip: "Add all items",
+		};
+		let clearAllButton: vscode.QuickInputButton = {
+			iconPath: new vscode.ThemeIcon("clear-all"),
+			tooltip: "Clear all items",
+		};
+		qp.buttons = [addAllButton, clearAllButton];
+		qp.onDidTriggerButton(button => {
+			for (const item of qp.items) {
+				if (item.kind == vscode.QuickPickItemKind.Separator) continue;
+				if (item == importButton) continue;
 
-		itemRecieved = true
-		qp.dispose()
-
-		
-
-		//show id window
-		const itemId = await vscode.window.showInputBox({
-			title: "Import Item from Minecraft",
-			ignoreFocusOut: true,
-			placeHolder: "Enter Item ID",
-			prompt: `Item will be added to library '${treeItem.library.id}'.`,
-			validateInput: value => {
-				let validation = validateItemId(value,treeItem.library)
-				if (validation !== true) {
-					return {
-						message: validation,
-						severity: vscode.InputBoxValidationSeverity.Error
-					}
+				if (button == addAllButton) {
+					if (qpItemLibIds.has(item)) continue;
+					qpItemLibIds.set(item, generateItemId(item.label));
+					updateQpItem(item);
+				}
+				else if (button == clearAllButton) {
+					if (!qpItemLibIds.has(item)) continue;
+					qpItemLibIds.delete(item);
+					updateQpItem(item);
 				}
 			}
-		})
-		if (itemId == null) { 
-			itemImportId = undefined
-			return 
-		}
+			showMainQp();
+		});
+		qp.onDidChangeActive(e => {
+			// if (qp.selectedItems.length  == 0) return;
+			activeItems = e;
+		});
+		qp.onDidChangeSelection(async e => {
+			if (qp.activeItems.length != 1) {
+				if (qp.activeItems.length != 0) qp.activeItems = [];
+				return;
+			};
+			let item = e[0];
+			qp.hide();
+			if (item == importButton) {
+				// finalize import
+				for (const [qpItem, libId] of qpItemLibIds) {
+					try {
+						addItemDataToLibrary(treeItem.library,libId,qpItemSnbts.get(qpItem)!);
+					} catch (e) {
+						vscode.window.showErrorMessage("Could not import item",{
+							modal: true,
+							detail: `${e}`
+						})
+					}
+				}
 
-
-		try {
-			addItemDataToLibrary(treeItem.library,itemId,itemData)
-		} catch (e) {
-			vscode.window.showErrorMessage("Could not import item",{
-				modal: true,
-				detail: `${e}`
-			})
-		}
-
-		
-		await saveLibrary(treeItem.library)
-		itemEditorProvider.refresh()
-
-		//if item was successfully added, remove from mc inv to avoid confusion
-		//remove from minecraft inventory
-		let indiciesToRemove: number[] = []
-		let inventory = await CodeClient.getInventory()
-
-		let i = -1;
-		for (const item of inventory) {
-			i++
-			let tags = item.components?.["minecraft:custom_data"]?.PublicBukkitValues
-			if (tags && "hypercube:__tc_ii_import" in tags && tags["hypercube:__tc_ii_import"] == thisImportId){
-				indiciesToRemove.unshift(i)
+				
+				await saveLibrary(treeItem.library)
+				itemEditorProvider.refresh()
+			} else {
+				let generatedItemId = generateItemId(item.label);
+				// edit item id / add to import
+				let nameInput = vscode.window.createInputBox();
+				if (qpItemLibIds.has(item)) {
+					nameInput.value = qpItemLibIds.get(item)!;
+				} else {
+					nameInput.value = generatedItemId;
+				}
+				nameInput.title = `Import '${item.label}' into '${treeItem.library.id}'`;
+				nameInput.ignoreFocusOut = true;
+				nameInput.busy = true;
+				nameInput.placeholder = generatedItemId;
+				nameInput.prompt = "Enter item ID to reference this item by";
+				nameInput.onDidChangeValue(e => {
+					let validation = validateItemId(nameInput.value,treeItem.library,[...qpItemLibIds.values()])
+					if (validation !== true) {
+						nameInput.validationMessage = {
+							message: validation,
+							severity: vscode.InputBoxValidationSeverity.Error
+						}
+					} else {
+						nameInput.validationMessage = undefined;
+					}
+				})
+				nameInput.onDidAccept(val => {
+					if (nameInput.validationMessage !== undefined) return;
+					qpItemLibIds.set(item, nameInput.value);
+					nameInput.dispose();
+					updateQpItem(item);
+					showMainQp();
+				});
+				nameInput.onDidHide(_ => {
+					showMainQp();
+				})
+				nameInput.show();
 			}
-		}
-
-		itemImportId = undefined
-		CodeClient.queueInvIndiciesForClear(indiciesToRemove)
-		CodeClient.heartbeat()
-	})
+		})
+		qp.onDidTriggerItemButton(e => {
+			qpItemLibIds.delete(e.item);
+			updateQpItem(e.item);
+			activeItems = [e.item];
+			showMainQp();
+		})
+		showMainQp();
+	});
 
 	vscode.commands.registerCommand("extension.terracotta.itemEditor.addItemToLibrary",async (treeItem: LibraryTreeItem) => {
 		const id = await vscode.window.showInputBox({
@@ -1467,12 +1529,6 @@ export function activate(context: vscode.ExtensionContext) {
 
 	//= commands =\\
 	vscode.commands.registerCommand("extension.terracotta.test",async () => {
-		let modeChangeResponse: TCClient.ChangeModeC2AResponse = await TCClient.sendRequestAsync(new TCClient.ChangeModeA2CRequest(TCClient.DFMode.DEV));
-		if (modeChangeResponse instanceof TCClient.ErrorResponse) {
-			vscode.window.showErrorMessage(modeChangeResponse.errorMessage);
-			return;
-		}
-		vscode.window.showInformationMessage('successfully chagned mode!!')
 		// TCClient.sendRequest(
 		// 	new TCClient.InitiateCodeEditA2CRequest(
 		// 		// [],

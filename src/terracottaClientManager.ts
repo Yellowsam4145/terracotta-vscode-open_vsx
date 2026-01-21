@@ -23,6 +23,7 @@ enum RequestMethod {
     START_EDITING_ITEM = "START_EDITING_ITEM",
     STOP_EDITING_ITEM = "STOP_EDITING_ITEM",
     GIVE_ITEM = "GIVE_ITEM",
+    GET_INVENTORY = "GET_INVENTORY",
 }
 
 enum NotificationMethod {
@@ -285,6 +286,32 @@ export class GiveItemA2CResponse extends Response {
         return new GiveItemA2CResponse();
     }
 }
+
+//=- give item -=\\
+export class GetInventoryA2CRequest extends Request {
+    override readonly RESPONSE_CLASS = GetInventoryA2CResponse;
+
+    constructor(
+    ) { super(RequestMethod.GET_INVENTORY); }
+
+    protected override buildOn(out: any) {
+        super.buildOn(out);
+    }
+}
+export class GetInventoryA2CResponse extends Response {
+    constructor(
+        public items: {snbt: string, name: string}[]
+    ) { 
+        super(); 
+    }
+
+    static override parse(msgJson: any): GetInventoryA2CResponse {
+        console.log("asdf asdf asdf ");
+        console.log(msgJson.data.items);
+        return new GetInventoryA2CResponse(msgJson.data.items);
+    }
+}
+
 
 //=- notifications -=\\
 export class ModeChangedC2ANotification extends Notification {
