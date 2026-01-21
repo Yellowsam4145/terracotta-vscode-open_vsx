@@ -634,10 +634,14 @@ async function startItemLibraryEditor(context: vscode.ExtensionContext) {
 			id = treeItem.library.id
 		} else if (treeItem instanceof ItemTreeItem) {
 			id = treeItem.itemId
+			if (itemsBeingEdited?.[treeItem.library.projectURL.toString()]?.[treeItem.library.id]?.[id]) {
+				vscode.window.showErrorMessage(`Cannot delete item '${id}' while it's being edited in Minecraft.`)
+				return;
+			}
 		} else {
 			return
 		}
-
+		
 		const prompt = `Please re-type this ${treeItem instanceof ItemTreeItem ? "item" : "library"}'s id ('${id}') to delete it`
 		
 		//make user re-type id to confirm deletion
@@ -668,6 +672,10 @@ async function startItemLibraryEditor(context: vscode.ExtensionContext) {
 			await fs.rm(treeItem.library.fileURL)
 			await updateLibrary(treeItem.library.fileURL,treeItem.library.projectURL)
 		} else if (treeItem instanceof ItemTreeItem) {
+			if (itemsBeingEdited?.[treeItem.library.projectURL.toString()]?.[treeItem.library.id]?.[treeItem.itemId]) {
+				vscode.window.showErrorMessage(`Cannot delete item '${id}' while it's being edited in Minecraft.`)
+				return;
+			}
 			delete treeItem.library.items[treeItem.itemId]
 			await saveLibrary(treeItem.library)
 		}
