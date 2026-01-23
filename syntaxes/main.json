@@ -365,6 +365,7 @@
             "patterns": [
                 {"include": "#playerEventHeader"},
                 {"include": "#entityEventHeader"},
+                {"include": "#gameEventHeader"},
                 {"include": "#functionHeader"},
                 {"include": "#processHeader"},
                 {"include": "#paramHeader"},
@@ -380,6 +381,10 @@
                 "entityEventHeader": {
                     "match": "(?<=^|(;\\s*))ENTITY_EVENT(?![\\w])",
                     "name": "storage.type.tc meta.function.tc df.block.event.entity.tc tc.header.codeline-type.event.entity"
+                },
+                "gameEventHeader": {
+                    "match": "(?<=^|(;\\s*))GAME_EVENT(?![\\w])",
+                    "name": "storage.type.tc meta.function.tc df.block.event.game.tc tc.header.codeline-type.event.game"
                 },
                 "functionHeader": {
                     "match": "(?<=^|(;\\s*))FUNCTION(?![\\w])",
@@ -533,7 +538,7 @@
             "name": "keyword.operator.tc"
         },
         "controlKeyword": {
-            "match": "(?<=^|(;?\\W+))(if|repeat|else|do|while|for|in|on|to|return|returnmult|break|continue|endthread|wait|print|printRaw|printError|printWarning)(?![\\w])",
+            "match": "(?<=^|(;?\\W+))(if|repeat|else|do|while|for|in|on|to|return|returnmult|break|continue|endthread|endallthreads|wait|print|printRaw|printError|printWarning)(?![\\w])",
             "name": "keyword.control.tc"
         },
         "paramModifierKeyword": {
