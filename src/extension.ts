@@ -1177,6 +1177,7 @@ async function buildToMinecraft(debugSession: vscode.DebugSession, launchArgumen
 		processes: new Set<string>(),
 		playerEvents: new Set<string>(),
 		entityEvents: new Set<string>(),
+		gameEvents: new Set<string>(),
 	}
 
 	let oldTemplatesHashes: Dict<Dict<string>> = {
@@ -1184,6 +1185,7 @@ async function buildToMinecraft(debugSession: vscode.DebugSession, launchArgumen
 		processes: {},
 		playerEvents: {},
 		entityEvents: {},
+		gameEvents: {},
 	}
 	
 	//read hashes of the last compilation
@@ -1214,12 +1216,13 @@ async function buildToMinecraft(debugSession: vscode.DebugSession, launchArgumen
 	let breakTemplates: TCClient.TemplateIdentifier[] = [];
 	let changedTemplateCount: number = 0
 
-	;["functions","processes","playerEvents","entityEvents"].forEach(headerFileType => {
+	;["functions","processes","playerEvents","entityEvents","gameEvents"].forEach(headerFileType => {
 		const headerTemplateType: TCClient.TemplateType = 
 			headerFileType == "functions" ? TCClient.TemplateType.FUNCTION : 
 			headerFileType == "processes" ? TCClient.TemplateType.PROCESS : 
 			headerFileType == "playerEvents" ? TCClient.TemplateType.PLAYER_EVENT :
-			TCClient.TemplateType.ENTITY_EVENT
+			headerFileType == "entityEvents" ? TCClient.TemplateType.ENTITY_EVENT :
+			TCClient.TemplateType.GAME_EVENT
 		let hashes: Dict<string> = {}
 
 		//get hashes of new templates

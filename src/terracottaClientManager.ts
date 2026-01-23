@@ -42,6 +42,7 @@ export enum DFMode {
 export enum TemplateType {
     PLAYER_EVENT = "PLAYER_EVENT",
     ENTITY_EVENT = "ENTITY_EVENT",
+    GAME_EVENT = "GAME_EVENT",
     FUNCTION = "FUNCTION",
     PROCESS = "PROCESS",
 }
