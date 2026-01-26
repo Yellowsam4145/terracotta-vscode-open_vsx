@@ -2,7 +2,7 @@
 	"name": "terracotta",
 	"displayName": "Terracotta",
 	"description": "Provides code editor features for the Terracotta language",
-	"version": "0.0.6",
+	"version": "0.0.7",
 	"publisher": "Owlfroggy",
 	"license": "BSD-3-Clause",
 	"repository": "https://github.com/Owlfroggy/terracotta-vscode",

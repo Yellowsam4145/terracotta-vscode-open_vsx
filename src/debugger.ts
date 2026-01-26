@@ -62,7 +62,7 @@ const requestHandlers: {[key: string]: (args: dap.Request) => void} = {
     "launch": async function(request) {
         sendResponse(request,{})
         
-        if (request.arguments.exportMode == "sendToCodeClient") {
+        if (request.arguments.exportMode == "sendToCodeClient" || request.arguments.exportMode == "sendToMinecraft") {
             launchArguments = request.arguments
             
             info = await new Promise<DebuggerExtraInfo>(resolve => {
@@ -195,6 +195,7 @@ const requestHandlers: {[key: string]: (args: dap.Request) => void} = {
                 processes: new Set<string>(),
                 playerEvents: new Set<string>(),
                 entityEvents: new Set<string>(),
+                gameEvents: new Set<string>(),
             }
 
             let oldTemplatesHashes: Dict<Dict<string>> = {
@@ -202,6 +203,7 @@ const requestHandlers: {[key: string]: (args: dap.Request) => void} = {
                 processes: {},
                 playerEvents: {},
                 entityEvents: {},
+                gameEvents: {},
             }
             
             //read hashes of the last compilation
@@ -231,12 +233,13 @@ const requestHandlers: {[key: string]: (args: dap.Request) => void} = {
             let placerCommands: string[] = []
             let changedTemplateCount: number = 0
 
-            ;["functions","processes","playerEvents","entityEvents"].forEach(headerType => {
+            ;["functions","processes","playerEvents","entityEvents","gameEvents"].forEach(headerType => {
                 const tcHeader = 
                     headerType == "functions" ? "FUNCTION" : 
                     headerType == "processes" ? "PROCESS" : 
                     headerType == "playerEvents" ? "PLAYER_EVENT" :
-                    "ENTITY_EVENT"
+                    headerType == "entityEvents" ? "ENTITY_EVENT" :
+                    "GAME_EVENT";
                 let hashes: Dict<string> = {}
 
                 //get hashes of new templates
