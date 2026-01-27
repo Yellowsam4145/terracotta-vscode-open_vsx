@@ -93,7 +93,7 @@ function getConfigValue<T>(key: string): T | undefined {
 
 interface ItemLibraryFile {
 	id: string,
-	items: {[key: string]: {version: number, data: string}},
+	items: {[key: string]: {version: number, data: string, image?: string}},
 	compilationMode: "item" | "variable"
 	fileURL: URL,
 	projectURL: URL,
@@ -165,6 +165,10 @@ export class ItemLibraryEditorProvider implements vscode.TreeDataProvider<vscode
 					if (itemsBeingEdited[element.library.projectURL.toString()]?.[element.library.id]?.[id]) {
 						item.contextValue = "itemBeingEdited"
 						item.description = "(editing)"
+					}
+
+					if (data.image && data.image != "error") {
+						item.iconPath = vscode.Uri.parse(data.image);
 					}
 
 					// parse item data
@@ -470,11 +474,27 @@ function validateItemData(item: any) {
  * @param item this item's data will NOT be modified
  */
 function addItemDataToLibrary(library: ItemLibraryFile, itemId: string, snbt: string) {
-	//add new data to library
-	library.items[itemId] = {
-		version: DF_NBT,
-		data: snbt
+	if (itemId in library.items) {
+		library.items[itemId].version = DF_NBT;
+		library.items[itemId].data = snbt;
+	} else {
+		library.items[itemId] = {
+			version: DF_NBT,
+			data: snbt
+		}
 	}
+}
+
+function refreshLibraryItemImage(library: ItemLibraryFile, itemId: string) {
+	//TODO: require tcclient connection
+	//TODO: check DF_NBT
+	if (!(itemId in library.items)) return;
+	let item = library.items[itemId];
+	TCClient.sendRequest(new TCClient.RenderItemA2CRequest(item.data),async (_, response: TCClient.RenderItemA2CResponse) => {
+		if (response instanceof TCClient.ErrorResponse) return;
+		item.image = response.image;
+		await saveLibrary(library);
+	})
 }
 
 
@@ -587,6 +607,7 @@ async function startItemLibraryEditor(context: vscode.ExtensionContext) {
 		}
 		else if (notif instanceof TCClient.ItemChangedC2ANotification) {
 			let library = itemLibraries[notif.workspacePath]![notif.libraryId]!
+			if (!library) return;
 			try {
 				addItemDataToLibrary(library, notif.itemId, notif.snbt)
 			} catch (e) {
@@ -597,6 +618,15 @@ async function startItemLibraryEditor(context: vscode.ExtensionContext) {
 			}
 
 			await saveLibrary(library)
+		}
+		else if (notif instanceof TCClient.ItemImageChangedC2ANotification) {
+			let library = itemLibraries[notif.workspacePath]![notif.libraryId]!
+			if (!library) return;
+			try {
+				let item = library.items[notif.itemId];
+				item.image = notif.image;
+				await saveLibrary(library)
+			} catch (e) {}
 		}
 	})
 	
@@ -855,7 +885,9 @@ async function startItemLibraryEditor(context: vscode.ExtensionContext) {
 				// finalize import
 				for (const [qpItem, libId] of qpItemLibIds) {
 					try {
-						addItemDataToLibrary(treeItem.library,libId,qpItemSnbts.get(qpItem)!);
+						let snbt = qpItemSnbts.get(qpItem)!;
+						addItemDataToLibrary(treeItem.library,libId,snbt);
+						refreshLibraryItemImage(treeItem.library,libId)
 					} catch (e) {
 						vscode.window.showErrorMessage("Could not import item",{
 							modal: true,

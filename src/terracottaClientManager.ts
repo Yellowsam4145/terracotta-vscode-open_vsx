@@ -22,6 +22,7 @@ enum RequestMethod {
     CHANGE_MODE = "CHANGE_MODE",
     START_EDITING_ITEM = "START_EDITING_ITEM",
     STOP_EDITING_ITEM = "STOP_EDITING_ITEM",
+    RENDER_ITEM = "RENDER_ITEM",
     GIVE_ITEM = "GIVE_ITEM",
     GET_INVENTORY = "GET_INVENTORY",
 }
@@ -29,6 +30,7 @@ enum RequestMethod {
 enum NotificationMethod {
     MODE_CHANGED = "MODE_CHANGED",
     ITEM_CHANGED = "ITEM_CHANGED",
+    ITEM_IMAGE_CHANGED = "ITEM_IMAGE_CHANGED",
     STOP_EDITING_ITEM = "STOP_EDITING_ITEM",
 }
 
@@ -265,6 +267,29 @@ export class StopEditingItemC2AResponse extends Response {
     }
 }
 
+//=- render item -=\\
+export class RenderItemA2CRequest extends Request {
+    override readonly RESPONSE_CLASS = RenderItemA2CResponse;
+
+    constructor(
+        public snbt: string,
+    ) { super(RequestMethod.RENDER_ITEM); }
+
+    protected override buildOn(out: any) {
+        super.buildOn(out);
+        out.data.snbt = this.snbt;
+    }
+}
+export class RenderItemA2CResponse extends Response {
+    constructor(
+        public image: string,
+    ) { super(); }
+
+    static override parse(msgJson: any): RenderItemA2CResponse {
+        return new RenderItemA2CResponse(msgJson.data.image);
+    }
+}
+
 //=- give item -=\\
 export class GiveItemA2CRequest extends Request {
     override readonly RESPONSE_CLASS = GiveItemA2CResponse;
@@ -349,6 +374,19 @@ export class ItemChangedC2ANotification extends Notification {
     }
 }
 
+export class ItemImageChangedC2ANotification extends Notification {
+    constructor(
+        public workspacePath: string,
+        public libraryId: string,
+        public itemId: string,
+        public image: string
+    ) {super();}
+
+    static override parse(msgJson: any): ItemImageChangedC2ANotification{
+        return new ItemImageChangedC2ANotification(msgJson.data.workspace_path, msgJson.data.library_id, msgJson.data.item_id, msgJson.data.image)
+    }
+}
+
 export class StopEditingItemC2ANotification extends Notification {
     constructor(
         public workspacePath: string,
@@ -357,7 +395,7 @@ export class StopEditingItemC2ANotification extends Notification {
     ) { super(); }
     
     static override parse(msgJson: any): StopEditingItemC2ANotification {
-        return new StopEditingItemC2ANotification(msgJson.data.workspace_path, msgJson.data.library_id, msgJson.data.item_id);
+        return new StopEditingItemC2ANotification(msgJson.data.workspace_path, msgJson.data.library_id, msgJson.data.item_id ?? undefined);
     }
 }
 
@@ -509,6 +547,7 @@ export async function tryConnection() {
                     switch (msgJson.method) {
                         case NotificationMethod.MODE_CHANGED: { notificationClass = ModeChangedC2ANotification; break }
                         case NotificationMethod.ITEM_CHANGED: { notificationClass = ItemChangedC2ANotification; break }
+                        case NotificationMethod.ITEM_IMAGE_CHANGED: { notificationClass = ItemImageChangedC2ANotification; break }
                         case NotificationMethod.STOP_EDITING_ITEM: { notificationClass = StopEditingItemC2ANotification; break }
                         default: throw new Error(`Received notification for unknown method ${msgJson.method}`)
                     }
