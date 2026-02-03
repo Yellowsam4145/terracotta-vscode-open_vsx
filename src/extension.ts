@@ -926,6 +926,7 @@ async function startItemLibraryEditor(context: vscode.ExtensionContext) {
 				})
 				nameInput.onDidAccept(val => {
 					if (nameInput.validationMessage !== undefined) return;
+					if (nameInput.value == "") return;
 					qpItemLibIds.set(item, nameInput.value);
 					nameInput.dispose();
 					updateQpItem(item);
