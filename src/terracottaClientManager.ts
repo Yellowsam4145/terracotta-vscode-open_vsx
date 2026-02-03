@@ -29,6 +29,7 @@ enum RequestMethod {
 
 enum NotificationMethod {
     MODE_CHANGED = "MODE_CHANGED",
+    PLOT_CHANGED = "PLOT_CHANGED",
     ITEM_CHANGED = "ITEM_CHANGED",
     ITEM_IMAGE_CHANGED = "ITEM_IMAGE_CHANGED",
     STOP_EDITING_ITEM = "STOP_EDITING_ITEM",
@@ -546,6 +547,7 @@ export async function tryConnection() {
                     let notificationClass;
                     switch (msgJson.method) {
                         case NotificationMethod.MODE_CHANGED: { notificationClass = ModeChangedC2ANotification; break }
+                        case NotificationMethod.PLOT_CHANGED: { notificationClass = PlotChangedC2ANotification; break }
                         case NotificationMethod.ITEM_CHANGED: { notificationClass = ItemChangedC2ANotification; break }
                         case NotificationMethod.ITEM_IMAGE_CHANGED: { notificationClass = ItemImageChangedC2ANotification; break }
                         case NotificationMethod.STOP_EDITING_ITEM: { notificationClass = StopEditingItemC2ANotification; break }
