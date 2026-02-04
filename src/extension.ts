@@ -1126,17 +1126,17 @@ async function startLanguageServer() {
 // rank: getConfigValue("rank"),
 
 async function buildToMinecraft(debugSession: vscode.DebugSession, launchArguments: any): Promise<void> {
-	function bluelog(message: string) {
+	function bluelog(message: any) {
 		console.log(message);
-		debugSession.customRequest("bluelog",message);
+		debugSession.customRequest("bluelog",""+message);
 	}
-	function log(message: string) {
+	function log(message: any) {
 		console.log(message);
-		debugSession.customRequest("log",message);
+		debugSession.customRequest("log",""+message);
 	}
-	function error(message: string) {
+	function error(message: any) {
 		console.error(message);
-		debugSession.customRequest("error",message);
+		debugSession.customRequest("error",""+message);
 	}
 	function end(exitCode: number) {
 		debugSession.customRequest("end",exitCode);
@@ -1165,8 +1165,8 @@ async function buildToMinecraft(debugSession: vscode.DebugSession, launchArgumen
 
 	let folderUrl = launchArguments.folder;
 	let tcMetaFolderPath = path.join(folderUrl,".terracotta");
-	let hashFilePath = path.join(tcMetaFolderPath,"templateHash");
-	let newHashFilePath = path.join(tcMetaFolderPath,"newTemplateHash");
+	let hashFilePath = path.join(tcMetaFolderPath,"templateHash_"+TCClient.plotId);
+	let newHashFilePath = path.join(tcMetaFolderPath,"newTemplateHash_"+TCClient.plotId);
 
 	//create .terracotta folder if it doesnt already exist
 	try {
@@ -1225,8 +1225,11 @@ async function buildToMinecraft(debugSession: vscode.DebugSession, launchArgumen
 	let fileContents: string | undefined = undefined
 	try {
 		fileContents = (await fs.readFile(hashFilePath)).toString()
-	} catch (e) {}
-	if (fileContents) {
+	} catch (e) {
+		console.error("failed to read template hash", e)
+	}
+
+	if (fileContents !== undefined) {
 		let headerType: string | undefined = undefined
 		fileContents.split("\n").forEach(line => {
 			//lines denoting change in header type
