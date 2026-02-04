@@ -438,6 +438,12 @@
 								"type": "array",
 								"description": "Always re-place these templates even if they haven't changed. Can help with CodeClient bugging out while placing.\nEach entry should be a string that takes the format of 'HEADER templateName' e.g. 'FUNCTION useItem' or 'PLAYER_EVENT Join' or 'PROCESS name w/ special chars!'",
 								"default": []
+							},
+							"plotIds": {
+								"type": "array",
+								"description": "An array of plot ids that this project is allowed to compile to. Attempting to compile to a plot that is not in this array will throw an error. \n\nIf this array is absent or empty, any plot can be compiled to.\n\nSetting this is highly recommended as it avoids accidentally overwriting code.",
+								"items": {"type": "number"},
+								"default": []
 							}
 						}
 					}

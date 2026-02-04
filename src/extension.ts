@@ -1326,6 +1326,11 @@ async function buildToMinecraft(debugSession: vscode.DebugSession, launchArgumen
 			end(1); return;
 		}
 	}
+	let plotIds: number[] = launchArguments.plotIds;
+	if (plotIds.length > 0 && !plotIds.includes(TCClient.plotId)) {
+		log(`Compilation was canceled because plot '${TCClient.plotName}' (id: ${TCClient.plotId}) is not included in the list of allowed plots.\n\nTo compile to this plot, add ${TCClient.plotId} to the 'plotIds' array in your launch.json configuration.`);
+		end(1); return;
+	}
 
 	log("Starting to place code...");
 	let placeResponse = await TCClient.sendRequestAsync(new TCClient.InitiateCodeEditA2CRequest(placeTemplates,breakTemplates));
