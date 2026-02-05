@@ -1158,10 +1158,14 @@ async function buildToMinecraft(debugSession: vscode.DebugSession, launchArgumen
 		rank = "overlord"
 	}
 
-	let plotSize = launchArguments.plotSize.toString()
+	let plotOverrides = launchArguments.plotOverrides[TCClient.plotId.toString()] ?? {};
+
+	let plotSize = plotOverrides.plotSize?.toString() ?? launchArguments.plotSize.toString()
 	if (!plotSize.match(/^[0-9.]+$/g)) {
 		plotSize = "300"
 	}
+	let autoSwitchToDev = plotOverrides.autoSwitchToDev ?? launchArguments.autoSwitchToDev;
+	let autoSwitchToPlay = plotOverrides.autoSwitchToPlay ?? launchArguments.autoSwitchToPlay;
 
 	let folderUrl = launchArguments.folder;
 	let tcMetaFolderPath = path.join(folderUrl,".terracotta");
@@ -1318,7 +1322,7 @@ async function buildToMinecraft(debugSession: vscode.DebugSession, launchArgumen
 		end(1); return;
 	}
 	if (TCClient.mode != TCClient.DFMode.DEV) {
-		if (launchArguments.autoSwitchToDev) {
+		if (autoSwitchToDev) {
 			log(`Switching to dev mode (currently in ${TCClient.mode.toLowerCase()})`);
 			await changeMode(TCClient.DFMode.DEV);  //- TEST
 		} else {
@@ -1341,8 +1345,8 @@ async function buildToMinecraft(debugSession: vscode.DebugSession, launchArgumen
 
 	await fs.rename(newHashFilePath,hashFilePath)
 
-	log(`Code placing complete! ${launchArguments.autoSwitchToPlay ? "Automatically switching to play mode" : ""}\n`);
-	if (launchArguments.autoSwitchToPlay) {
+	log(`Code placing complete! ${autoSwitchToPlay ? "Automatically switching to play mode" : ""}\n`);
+	if (autoSwitchToPlay) {
 		TCClient.sendRequest(new TCClient.ChangeModeA2CRequest(TCClient.DFMode.PLAY));
 	}
 	end(0); return;

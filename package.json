@@ -439,6 +439,19 @@
 								"description": "An array of plot ids that this project is allowed to compile to. Attempting to compile to a plot that is not in this array will throw an error. \n\nIf this array is absent or empty, any plot can be compiled to.\n\nSetting this is highly recommended as it avoids accidentally overwriting code.",
 								"items": {"type": "number"},
 								"default": []
+							},
+							"plotOverrides": {
+								"type": "object",
+								"description": "Override compilation settings when compiling to specific plots.\n\nThe following properties can be overridden: \n`plotSize`\n`autoSwitchToDev`\n`autoSwitchToPlay`",
+								"additionalProperties": {
+									"type": "object",
+									"properties": {
+										"plotSize": {"type": "number"},
+										"autoSwitchToDev": {"type": "boolean"},
+										"autoSwitchToPlay": {"type": "boolean"}
+									}
+								}
+								
 							}
 						}
 					}
