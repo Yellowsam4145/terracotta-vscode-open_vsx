@@ -30,6 +30,7 @@ enum RequestMethod {
 enum NotificationMethod {
     MODE_CHANGED = "MODE_CHANGED",
     PLOT_CHANGED = "PLOT_CHANGED",
+    SCAN_STATE_CHANGED = "SCAN_STATE_CHANGED",
     ITEM_CHANGED = "ITEM_CHANGED",
     ITEM_IMAGE_CHANGED = "ITEM_IMAGE_CHANGED",
     STOP_EDITING_ITEM = "STOP_EDITING_ITEM",
@@ -40,6 +41,13 @@ export enum DFMode {
     DEV = "DEV",
     PLAY = "PLAY",
     BUILD = "BUILD",
+}
+
+export enum ScanState {
+    NOT_SCANNED = "NOT_SCANNED",
+    SCANNING_BOUNDS = "SCANNING_BOUNDS",
+    SCANNING_CODE = "SCANNING_CODE",
+    SCANNED = "SCANNED"
 }
 
 export enum TemplateType {
@@ -362,6 +370,17 @@ export class PlotChangedC2ANotification extends Notification {
     }
 }
 
+export class ScanStateChangedC2ANotification extends Notification {
+    constructor(
+        public scanState: ScanState
+    ) { super(); }
+    
+    static override parse(msgJson: any): ScanStateChangedC2ANotification {
+        return new ScanStateChangedC2ANotification(msgJson.data.scan_state);
+    }
+}
+
+
 export class ItemChangedC2ANotification extends Notification {
     constructor(
         public workspacePath: string,
@@ -410,6 +429,7 @@ export let isAuthed: boolean = false;
 export let plotId: number = -1;
 export let plotName: string = "Unknown";
 export let mode: DFMode = DFMode.SPAWN;
+export let scanState: ScanState = ScanState.NOT_SCANNED;
 
 let extensionContext: ExtensionContext;
 let token: string | undefined = undefined;
@@ -432,6 +452,9 @@ async function handleNotification(notification: Notification) {
     else if (notification instanceof PlotChangedC2ANotification) {
         plotId = notification.plotId;
         plotName = notification.plotName;
+    }
+    else if (notification instanceof ScanStateChangedC2ANotification) {
+        scanState = notification.scanState;
     }
     for (const callback of notificationCallbacks) {
         callback(notification);
@@ -548,6 +571,7 @@ export async function tryConnection() {
                     switch (msgJson.method) {
                         case NotificationMethod.MODE_CHANGED: { notificationClass = ModeChangedC2ANotification; break }
                         case NotificationMethod.PLOT_CHANGED: { notificationClass = PlotChangedC2ANotification; break }
+                        case NotificationMethod.SCAN_STATE_CHANGED: { notificationClass = ScanStateChangedC2ANotification; break }
                         case NotificationMethod.ITEM_CHANGED: { notificationClass = ItemChangedC2ANotification; break }
                         case NotificationMethod.ITEM_IMAGE_CHANGED: { notificationClass = ItemImageChangedC2ANotification; break }
                         case NotificationMethod.STOP_EDITING_ITEM: { notificationClass = StopEditingItemC2ANotification; break }
