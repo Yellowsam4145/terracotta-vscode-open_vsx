@@ -341,9 +341,28 @@ export class GetInventoryA2CResponse extends Response {
     }
 
     static override parse(msgJson: any): GetInventoryA2CResponse {
-        console.log("asdf asdf asdf ");
-        console.log(msgJson.data.items);
         return new GetInventoryA2CResponse(msgJson.data.items);
+    }
+}
+
+//=- give item -=\\
+export class RescanPlotA2CRequest extends Request {
+    override readonly RESPONSE_CLASS = RescanPlotA2CResponse;
+
+    constructor(
+    ) { super(RequestMethod.RESCAN_PLOT); }
+
+    protected override buildOn(out: any) {
+        super.buildOn(out);
+    }
+}
+export class RescanPlotA2CResponse extends Response {
+    constructor() { 
+        super(); 
+    }
+
+    static override parse(msgJson: any): RescanPlotA2CResponse {
+        return new RescanPlotA2CResponse();
     }
 }
 

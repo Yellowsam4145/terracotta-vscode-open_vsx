@@ -1299,6 +1299,7 @@ async function buildToMinecraft(debugSession: vscode.DebugSession, launchArgumen
 	await fs.writeFile(newHashFilePath,newHashFileContents,"utf-8")
 
 	//= actually send to the placer =\\
+
 	if (changedTemplateCount == 0) {
 		log(`No template changes detected since last compilation`);		
 		await fs.rename(newHashFilePath,hashFilePath)
@@ -1334,6 +1335,14 @@ async function buildToMinecraft(debugSession: vscode.DebugSession, launchArgumen
 	if (plotIds.length > 0 && !plotIds.includes(TCClient.plotId)) {
 		log(`Compilation was canceled because plot '${TCClient.plotName}' (id: ${TCClient.plotId}) is not included in the list of allowed plots.\n\nTo compile to this plot, add ${TCClient.plotId} to the 'plotIds' array in your launch.json configuration.`);
 		end(1); return;
+	}
+	if (TCClient.scanState != TCClient.ScanState.SCANNED) {
+		log(`Scanning codespace... (this may take a few seconds)`);
+		let response = await TCClient.sendRequestAsync(new TCClient.RescanPlotA2CRequest());
+		if (response instanceof TCClient.ErrorResponse) {
+			error(`Failed to scan plot: ${response.errorMessage}`);
+			end(1); return;
+		}
 	}
 
 	log("Starting to place code...");
