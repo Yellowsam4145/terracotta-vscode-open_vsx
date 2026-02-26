@@ -504,6 +504,11 @@ let latestRequestId: number = 0;
 export function sendRequest<T extends Request, Y extends Response>(request: T, callback?: (request: T, response: Y) => void) {
     latestRequestId++;
     request.id = latestRequestId;
+    if (!isConnected) {
+        let response: ErrorResponse = new ErrorResponse("NOT_CONNECTED","Terracotta is not connected to Minecraft.");
+        if (callback) callback(request, response as unknown as Y); // response as unknown as Y thank you typescript
+        return;
+    }
     activeRequests.set(request.id,request);
     if (callback) request.responseCallbacks.push(callback);
     webSocket.send(request.serialize());
