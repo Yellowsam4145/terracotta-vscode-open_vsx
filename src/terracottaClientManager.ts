@@ -658,6 +658,7 @@ export function close() {
  */
 export async function refreshToken() {
     await extensionContext.secrets.delete("tcclient_token"); 
+    if (!isConnected) return;
     close();
     // this is terrible goofy ass awful waiting code please never do this
     const delay = (ms: number) => new Promise(res => setTimeout(res, ms));

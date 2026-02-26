@@ -1626,7 +1626,11 @@ export function activate(context: vscode.ExtensionContext) {
 
 	//= commands =\\
 	vscode.commands.registerCommand("extension.terracotta.refreshAuthentication", () => {
-		vscode.window.showInformationMessage("Refreshing authentication, check your Minecraft Client");
+		if (TCClient.isConnected) {
+			vscode.window.showInformationMessage("Refreshing authentication, check your Minecraft Client");
+		} else {
+			vscode.window.showInformationMessage("Old token was deleted, you will be prompted to reauthenticate when you start your Minecraft client");
+		}
 		TCClient.refreshToken();
 	});
 
