@@ -500,24 +500,17 @@ function refreshLibraryItemImage(library: ItemLibraryFile, itemId: string) {
 
 
 //returns `true` 
-async function requireCodeClientConnection(refusalMessage: string, requiredMode: "code" | undefined = undefined): Promise<boolean> {
-	if (!CodeClient.isConnected) {
-		vscode.window.showErrorMessage(`${refusalMessage} because Terracotta could not connect to CodeClient.`,{},"Retry CodeClient Connection").then(value => {
-			if (value == "Retry CodeClient Connection") {
-				CodeClient.tryConnection()
+async function erequireTCClientConnection(action: string): Promise<boolean> {
+	if (!TCClient.isConnected) {
+		vscode.window.showErrorMessage(`Could not ${action} because Terracotta is not connected to Minecraft.`,{},"Retry Connection").then(value => {
+			if (value == "Retry Connection") {
+				TCClient.tryConnection()
 			}
 		})
 		return false
-	} else if (!CodeClient.isAuthed) {
-		vscode.window.showErrorMessage(`${refusalMessage} because Terracotta lacks CodeClient permissions. Try running /auth in Minecraft.`)
+	} else if (!TCClient.isAuthed) {
+		vscode.window.showErrorMessage(`Coold not ${action} because Terracotta lacks permissions. Try authenticating it in your Minecraft client.`)
 		return false
-	}
-	if (requiredMode !== undefined) {
-		let currentMode = await CodeClient.getMode()
-		if (currentMode != requiredMode) {
-			vscode.window.showErrorMessage(`${refusalMessage} because you are not in ${requiredMode == "code" ? "dev" : requiredMode} mode.`)
-			return false
-		}
 	}
 	return true
 }
@@ -540,6 +533,12 @@ function handleErrorResponse(response: TCClient.Response, action: string): boole
 					vscode.commands.executeCommand("extension.terracotta.refreshAuthentication")
 				}
 			});
+		} else if (response.errorCode == "NOT_CONNECTED") {
+			vscode.window.showErrorMessage(`Could not ${action} because Terracotta is not connected to Minecraft. If Minecraft is running and the mod is installed, try refreshing.`,{},"Refresh Connection").then(value => {
+				if (value == "Refresh Connection") {
+					TCClient.tryConnection()
+				}
+			})
 		} else {
 			vscode.window.showErrorMessage(
 				`Could not ${action}: ${response.errorMessage} (code: ${response.errorCode})`,
@@ -679,8 +678,6 @@ async function startItemLibraryEditor(context: vscode.ExtensionContext) {
 	})
 
 	vscode.commands.registerCommand("extension.terracotta.itemEditor.giveStaticCopy",async (treeItem: ItemTreeItem) => {
-		// if (!await requireCodeClientConnection("Item cannot be given","code")) {return}
-
 		let response = await TCClient.sendRequestAsync(new TCClient.GiveItemA2CRequest(
 			treeItem.library.items[treeItem.itemId].data,
 			treeItem.library.items[treeItem.itemId].version)
@@ -771,8 +768,6 @@ async function startItemLibraryEditor(context: vscode.ExtensionContext) {
 	})
 
 	vscode.commands.registerCommand("extension.terracotta.itemEditor.startEditingItem",async (treeItem: ItemTreeItem) => {
-		// if (!await requireCodeClientConnection("Item cannot be edited","code")) {return}
-
 		// CodeClient.sendMessage(`give ${NBT.stringify(parsed)}`)
 		let response = await TCClient.sendRequestAsync(new TCClient.StartEditingItemA2CRequest(
 			treeItem.library.projectURL.toString(),
@@ -1661,9 +1656,7 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage("Terracotta is not authorized to interact with CodeClient. Please run `/auth` in Minecraft to enable full functionality.",{modal: true})
 	})
 
-	vscode.commands.registerCommand("extension.terracotta.importCodeValue",async () => {
-		if (!await requireCodeClientConnection("Values cannot be imported","code")) {return}
-		
+	vscode.commands.registerCommand("extension.terracotta.importCodeValue",async () => {		
 		let qp = vscode.window.createQuickPick()
 		qp.title = "Item Converter"
 		qp.placeholder = "Click on an item icon to convert it and copy it to the clipboard"

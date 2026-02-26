@@ -11,8 +11,12 @@ enum MessageType {
 
 enum Permission {
     EDIT_CODE = "EDIT_CODE",
+    EDIT_LIBRARY_ITEMS = "EDIT_LIBRARY_ITEMS",
+    GET_INVENTORY = "GET_INVENTORY",
+    GIVE_ITEMS = "GIVE_ITEMS",
+    GET_PLOT_INFO = "GET_PLOT_INFO",
+    GET_MODE_INFO = "GET_MODE_INFO",
     CHANGE_MODE = "CHANGE_MODE",
-    GET_PLOT_INFO = "GET_PLOT_INFO"
 }
 
 enum RequestMethod {
@@ -25,6 +29,7 @@ enum RequestMethod {
     RENDER_ITEM = "RENDER_ITEM",
     GIVE_ITEM = "GIVE_ITEM",
     GET_INVENTORY = "GET_INVENTORY",
+    RESCAN_PLOT = "RESCAN_PLOT",
 }
 
 enum NotificationMethod {
@@ -484,7 +489,15 @@ function requestToken() {
     sendRequest(
         new RequestTokenA2CRequest(
             "terracotta",
-            [Permission.EDIT_CODE,Permission.CHANGE_MODE,Permission.GET_PLOT_INFO]
+            [
+                Permission.EDIT_CODE,
+                Permission.EDIT_LIBRARY_ITEMS,
+                Permission.GET_INVENTORY,
+                Permission.GIVE_ITEMS,
+                Permission.GET_PLOT_INFO,
+                Permission.GET_MODE_INFO,
+                Permission.CHANGE_MODE,
+            ]
         ), 
         async (request, response: RequestTokenC2AResponse) => {
             if (response instanceof ErrorResponse) {
