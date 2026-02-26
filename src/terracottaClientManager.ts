@@ -635,6 +635,20 @@ export function close() {
     webSocket.close();
 }
 
+/**
+ * Deletes the stored token, closes tcclient connection, then reconnects to prompt creation of a new token
+ */
+export async function refreshToken() {
+    await extensionContext.secrets.delete("tcclient_token"); 
+    close();
+    // this is terrible goofy ass awful waiting code please never do this
+    const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
+    while (isConnected === true) {
+        await delay(100); // Check every 100ms
+    }
+    tryConnection();
+}
+
 setInterval(() => {
     if (!isConnected) tryConnection()
 },10000)

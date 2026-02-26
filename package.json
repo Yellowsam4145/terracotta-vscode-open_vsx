@@ -382,6 +382,11 @@
 				"category": "Terracotta"
 			},
 			{
+				"command": "extension.terracotta.refreshAuthentication",
+				"title": "Refresh Terracotta Authentication",
+				"category": "Terracotta"
+			},
+			{
 				"command": "extension.terracotta.info.codeClientAuth",
 				"title": "Code Client Auth Info",
 				"category": "Terracotta"

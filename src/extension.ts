@@ -522,6 +522,36 @@ async function requireCodeClientConnection(refusalMessage: string, requiredMode:
 	return true
 }
 
+/**
+ * Sends error notification if response is an error response
+ * msg format: Could not ${action}: ${error message} (${error code})
+ * @param response The response to check
+ * @returns True if the response was an error, false otherwise
+ */
+function handleErrorResponse(response: TCClient.Response, action: string): boolean {
+	if (response instanceof TCClient.ErrorResponse) {
+		if (response.errorCode == "NO_PERMISSION") {
+			vscode.window.showErrorMessage(
+				`Could not ${action} due to missing permissions: ${response.errorMessage}\nIf this issue persists, try refreshing authentication.`,
+				{detail: "Error"},
+				"Refresh Authentication"
+			).then(v => {
+				if (v == "Refresh Authentication") {
+					vscode.commands.executeCommand("extension.terracotta.refreshAuthentication")
+				}
+			});
+		} else {
+			vscode.window.showErrorMessage(
+				`Could not ${action}: ${response.errorMessage} (code: ${response.errorCode})`,
+				{detail: "Error"},
+			);
+		}
+
+		return true;
+	} else {
+		return false;
+	}
+}
 
 async function startItemLibraryEditor(context: vscode.ExtensionContext) {
 	//i just set a new personal best for ugliest for loops ever written
@@ -651,10 +681,11 @@ async function startItemLibraryEditor(context: vscode.ExtensionContext) {
 	vscode.commands.registerCommand("extension.terracotta.itemEditor.giveStaticCopy",async (treeItem: ItemTreeItem) => {
 		// if (!await requireCodeClientConnection("Item cannot be given","code")) {return}
 
-		TCClient.sendRequest(new TCClient.GiveItemA2CRequest(
+		let response = await TCClient.sendRequestAsync(new TCClient.GiveItemA2CRequest(
 			treeItem.library.items[treeItem.itemId].data,
 			treeItem.library.items[treeItem.itemId].version)
 		);
+		handleErrorResponse(response, "give item");
 	})
 
 	vscode.commands.registerCommand("extension.terracotta.itemEditor.delete",async (treeItem: vscode.TreeItem) => {
@@ -742,17 +773,20 @@ async function startItemLibraryEditor(context: vscode.ExtensionContext) {
 	vscode.commands.registerCommand("extension.terracotta.itemEditor.startEditingItem",async (treeItem: ItemTreeItem) => {
 		// if (!await requireCodeClientConnection("Item cannot be edited","code")) {return}
 
-		let projectUrlString = treeItem.library.projectURL.toString()
-		ensurePathExistance(itemsBeingEdited,projectUrlString,treeItem.library.id)[treeItem.itemId] = true
-
 		// CodeClient.sendMessage(`give ${NBT.stringify(parsed)}`)
-		TCClient.sendRequest(new TCClient.StartEditingItemA2CRequest(
+		let response = await TCClient.sendRequestAsync(new TCClient.StartEditingItemA2CRequest(
 			treeItem.library.projectURL.toString(),
 			treeItem.library.id,
 			treeItem.itemId,
 			treeItem.library.items[treeItem.itemId].data,
 			5 // TODO: THIS DOESNT WORK!!
 		));
+
+		if (handleErrorResponse(response, "edit library item")) return;
+
+		let projectUrlString = treeItem.library.projectURL.toString()
+		ensurePathExistance(itemsBeingEdited,projectUrlString,treeItem.library.id)[treeItem.itemId] = true
+
 		itemEditorProvider.refresh()
 	})
 
@@ -768,6 +802,9 @@ async function startItemLibraryEditor(context: vscode.ExtensionContext) {
 		// if (!await requireCodeClientConnection("Items cannot be imported","code")) {return}
 
 		let invResponse: TCClient.GetInventoryA2CResponse = await TCClient.sendRequestAsync(new TCClient.GetInventoryA2CRequest());
+		
+		if (handleErrorResponse(invResponse, "import items")) return;
+		
 		let qp = vscode.window.createQuickPick();
 		let qpItemSnbts: Map<vscode.QuickPickItem, string> = new Map();
 		let qpItemLibIds: Map<vscode.QuickPickItem, string> = new Map();
@@ -1593,6 +1630,11 @@ export function activate(context: vscode.ExtensionContext) {
 	}
 
 	//= commands =\\
+	vscode.commands.registerCommand("extension.terracotta.refreshAuthentication", () => {
+		vscode.window.showInformationMessage("Refreshing authentication, check your Minecraft Client");
+		TCClient.refreshToken();
+	});
+
 	vscode.commands.registerCommand("extension.terracotta.test",async () => {
 		// TCClient.sendRequest(
 		// 	new TCClient.InitiateCodeEditA2CRequest(
