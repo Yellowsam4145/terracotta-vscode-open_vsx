@@ -198,7 +198,7 @@
 					"when": "false"
 				},
 				{
-					"command": "extension.terracotta.info.codeClientAuth",
+					"command": "extension.terracotta.info.tcClientAuth",
 					"when": "false"
 				}
 			],
@@ -387,8 +387,8 @@
 				"category": "Terracotta"
 			},
 			{
-				"command": "extension.terracotta.info.codeClientAuth",
-				"title": "Code Client Auth Info",
+				"command": "extension.terracotta.info.tcClientAuth",
+				"title": "Terracotta Client Auth Info",
 				"category": "Terracotta"
 			}
 		],

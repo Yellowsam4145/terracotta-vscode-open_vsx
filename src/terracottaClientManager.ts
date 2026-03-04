@@ -444,6 +444,7 @@ export class StopEditingItemC2ANotification extends Notification {
 }
 
 type NotificationCallback = (notif: Notification) => void;
+type ConnectionStatusCallback = (isConnected: boolean, isAuthed: boolean) => void;
 
 export let webSocket: WebSocket;
 
@@ -462,6 +463,7 @@ let providedToken: string | undefined = undefined;
 /** key: id */
 const activeRequests: Map<number, Request> = new Map();
 const notificationCallbacks: Set<NotificationCallback> = new Set();
+const connectionStatusCallbacks: Set<ConnectionStatusCallback> = new Set();
 
 async function handleResponse(request: Request, response: Response) {
     for (const callback of request.responseCallbacks) {
@@ -507,6 +509,7 @@ function requestToken() {
             } else if (response instanceof RequestTokenC2AResponse) {
                 token = response.token;
                 isAuthed = true;
+                fireConnectionStatusChanged();
                 await extensionContext.secrets.store('tcclient_token', token);
             }
         }
@@ -536,8 +539,18 @@ export async function sendRequestAsync<T extends Request, Y extends Response>(re
     return promise;
 }
 
-export async function onNotification(callback: NotificationCallback) {
+export function onNotification(callback: NotificationCallback) {
     notificationCallbacks.add(callback);
+}
+
+export function onConnectionStatusChanged(callback: ConnectionStatusCallback) {
+    connectionStatusCallbacks.add(callback);
+}
+
+function fireConnectionStatusChanged() {
+    for (const callback of connectionStatusCallbacks) {
+        callback(isConnected, isAuthed);
+    }
 }
 
 export function initialize(context: ExtensionContext) {
@@ -560,6 +573,7 @@ export async function tryConnection() {
     
     webSocket.on("open",async () => {
         isConnected = true;
+        fireConnectionStatusChanged();
 
         console.log ("OPENED!");
         let storedToken = await extensionContext.secrets.get("tcclient_token");
@@ -573,6 +587,7 @@ export async function tryConnection() {
                         requestToken();
                     } else if (response instanceof ProvideTokenC2AResponse) {
                         isAuthed = true;
+                        fireConnectionStatusChanged();
                         token = providedToken;
                     }
                 }
@@ -646,6 +661,7 @@ export async function tryConnection() {
         }
         isConnected = false
         isAuthed = false
+        fireConnectionStatusChanged();
     })
 }
 

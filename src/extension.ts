@@ -1470,10 +1470,6 @@ export function activate(context: vscode.ExtensionContext) {
         }
 	})
 
-	CodeClient.attachCallback("connectionStatusChanged",async () => {
-		updateCodeClientStatusBar()
-	})
-
 	CodeClient.attachCallback("heartbeat",async (inventory: NBTTypes.ListTagLike) => {
 		let modifiedLibraries: Map<ItemLibraryFile, true> = new Map()
 		let editingItemsInInventory: Dict<Dict<Dict<boolean>>> = {} //works the same as itemsBeingEdited
@@ -1606,23 +1602,25 @@ export function activate(context: vscode.ExtensionContext) {
 	}
 	updateVersionStatusBar()
 
-	const codeClientStatusBarItem = vscode.window.createStatusBarItem("terracottaCodeClient",vscode.StatusBarAlignment.Right,-299)
-	updateCodeClientStatusBar = function() {
-		if (CodeClient.isConnected && CodeClient.isAuthed) {
-			codeClientStatusBarItem.text = "$(check)CC Connected"
-			codeClientStatusBarItem.backgroundColor = undefined
-			codeClientStatusBarItem.command = undefined
-			codeClientStatusBarItem.show()
+	const tcClientStatusBarItem = vscode.window.createStatusBarItem("tcClientConnection",vscode.StatusBarAlignment.Right,-299)
+	TCClient.onConnectionStatusChanged((isConnected, isAuthed) => {
+		if (isConnected) {
+			tcClientStatusBarItem.show();
+		} else {
+			tcClientStatusBarItem.hide();
+			return;
 		}
-		else if (CodeClient.isConnected && !CodeClient.isAuthed) {
-			codeClientStatusBarItem.text = "$(close)CC Not Authed"
-			codeClientStatusBarItem.backgroundColor = new vscode.ThemeColor("statusBarItem.warningBackground")
-			codeClientStatusBarItem.command = "extension.terracotta.info.codeClientAuth"
-			codeClientStatusBarItem.show()
-		} else if (!CodeClient.isConnected) {
-			codeClientStatusBarItem.hide()
+		if (isAuthed) {
+			tcClientStatusBarItem.text = "$(check)Connected to MC"
+			tcClientStatusBarItem.backgroundColor = undefined
+			tcClientStatusBarItem.command = undefined
+		} else {
+			tcClientStatusBarItem.text = "$(close)Awaiting permission in MC"
+			tcClientStatusBarItem.backgroundColor = new vscode.ThemeColor("statusBarItem.warningBackground")
+			tcClientStatusBarItem.command = "extension.terracotta.info.tcClientAuth"
 		}
-	}
+	});
+	
 
 	//= commands =\\
 	vscode.commands.registerCommand("extension.terracotta.refreshAuthentication", () => {
@@ -1656,8 +1654,8 @@ export function activate(context: vscode.ExtensionContext) {
 		CodeClient.tryConnection();
 	})
 
-	vscode.commands.registerCommand("extension.terracotta.info.codeClientAuth",() => {
-		vscode.window.showInformationMessage("Terracotta is not authorized to interact with CodeClient. Please run `/auth` in Minecraft to enable full functionality.",{modal: true})
+	vscode.commands.registerCommand("extension.terracotta.info.tcClientAuth",() => {
+		vscode.window.showInformationMessage("Terracotta is not authorized to interact with Minecraft. Please give it access from within your Minecraft client to enable full functionality.",{modal: true})
 	})
 
 	vscode.commands.registerCommand("extension.terracotta.importCodeValue",async () => {		
