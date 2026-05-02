@@ -1,0 +1,27 @@
+{
+    "scopeName": "markdown.terracotta.codeblock",
+    "injectionSelector": "L:text.html.markdown",
+    "patterns": [
+        {
+            "include": "#terracotta-code-block"
+        }
+    ],
+    "repository": {
+        "terracotta-code-block": {
+            "begin": "(^|\\G)(\\s*)(\\`{3,}|~{3,})\\s*(?i:(terracotta|tc))(?:\\s+[^\\n]*)?\\s*$",
+            "end": "(^|\\G)(\\2|\\s{0,3})(\\3)\\s*$",
+            "patterns": [
+                {
+                    "begin": "(^|\\G)(?!\\s*([`~]{3,})\\s*$)",
+                    "while": "(^|\\G)(?!\\s*([`~]{3,})\\s*$)",
+                    "contentName": "meta.embedded.block.terracotta",
+                    "patterns": [
+                        {
+                            "include": "source.terracotta"
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+}

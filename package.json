@@ -23,7 +23,8 @@
 			{
 				"id": "terracotta",
 				"aliases": [
-					"Terracotta"
+					"Terracotta",
+					"tc"
 				],
 				"extensions": [
 					".tc"
@@ -134,6 +135,16 @@
 				"language": "terracotta",
 				"scopeName": "source.terracotta",
 				"path": "./syntaxes/main.json"
+			},
+			{
+				"scopeName": "markdown.terracotta.codeblock",
+				"path": "./syntaxes/terracotta-markdown-injection.json",
+				"injectTo": [
+					"text.html.markdown"
+				],
+				"embeddedLanguages": {
+					"meta.embedded.block.terracotta": "terracotta"
+				}
 			}
 		],
 		"menus": {
