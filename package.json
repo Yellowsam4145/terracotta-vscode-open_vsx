@@ -377,6 +377,11 @@
 				"icon": "$(versions)"
 			},
 			{
+				"command": "extension.terracotta.restartLanguageServer",
+				"title": "Restart Terracotta Language Server",
+				"category": "terracotta"
+			},
+			{
 				"command": "extension.terracotta.info.codeClientAuth",
 				"title": "Code Client Auth Info",
 				"category": "Terracotta"

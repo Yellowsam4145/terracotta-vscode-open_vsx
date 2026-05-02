@@ -1539,6 +1539,10 @@ export function activate(context: vscode.ExtensionContext) {
 		})
 	})
 
+	vscode.commands.registerCommand("extension.terracotta.restartLanguageServer", () => {
+		startLanguageServer();
+	})
+
 	//= set up debugger =\\
 
 	//split up all the async callbacks into their own group to avoid
