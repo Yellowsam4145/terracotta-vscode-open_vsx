@@ -4,7 +4,6 @@
         {"include": "#commentedLine"},
         {"include": "#controlKeyword"},
         {"include": "#selectKeyword"},
-        {"include": "#paramModifierKeyword"},
         {"include": "#headerKeyword"},
         {"include": "#expression"},
         {"include": "#semicolon"}
@@ -15,18 +14,17 @@
                 {"include": "#commentedLine"},
                 {"include": "#braces"},
                 {"include": "#string"},
+                {"include": "#parentheticFunctionCall"},
+                {"include": "#accessedProperty"},
+                {"include": "#accessee"},
+                {"include": "#standaloneTypeName"},
                 {"include": "#hexNumber"},
                 {"include": "#number"},
-                {"include": "#typeConstructor"},
-                {"include": "#domain"},
-                {"include": "#conditionCall"},
                 {"include": "#arglessFunctionCall"},
                 {"include": "#callCustomFunction"},
                 {"include": "#controlKeyword"},
                 {"include": "#variable"},
-                {"include": "#operator"},
-                {"include": "#typeAnnotationAnywhere"},
-                {"include": "#parentheticFunctionCall"}
+                {"include": "#operator"}
             ],
             "repository": {
                 "number": {
@@ -165,151 +163,11 @@
                         }
                     }
                 },
-                "domain": {
-                    "patterns": [
-                        {"include": "#genericActionDomain"},
-                        {"include": "#genericValueDomain"},
-                        {"include": "#genericConditionDomain"}
-                    ],
-                    "repository": {
-                        "target": {
-                            "patterns": [
-                                {"include": "#defaultTarget"},
-                                {"include": "#defaultEntityTarget"},
-                                {"include": "#selectionTarget"},
-                                {"include": "#selectionEntitiesTarget"},
-                                {"include": "#killerTarget"},
-                                {"include": "#killerEntityTarget"},
-                                {"include": "#damagerTarget"},
-                                {"include": "#damagerEntityTarget"},
-                                {"include": "#shooterTarget"},
-                                {"include": "#shooterEntityTarget"},
-                                {"include": "#victimTarget"},
-                                {"include": "#victimEntityTarget"},
-                                {"include": "#allTarget"},
-                                {"include": "#allEntitiesTarget"},
-                                {"include": "#allMobsTarget"},
-                                {"include": "#projectileTarget"},
-                                {"include": "#lastSpawnedEntityTarget"}
-                            ],
-                            "repository": {
-                                "defaultTarget": {
-                                    "match": "default",
-                                    "name": "df.target.default.player.tc"
-                                },
-                                "defaultEntityTarget": {
-                                    "match": "defaultEntity",
-                                    "name": "df.target.default.entity.tc"
-                                },
-                                "selectionTarget": {
-                                    "match": "selection",
-                                    "name": "df.target.selection.player.tc"
-                                },
-                                "selectionEntitiesTarget": {
-                                    "match": "selectionEntities",
-                                    "name": "df.target.selection.entity.tc"
-                                },
-                                "killerTarget": {
-                                    "match": "killer",
-                                    "name": "df.target.killer.player.tc"
-                                },
-                                "killerEntityTarget": {
-                                    "match": "killerEntity",
-                                    "name": "df.target.killer.entity.tc"
-                                },
-                                "damagerTarget": {
-                                    "match": "damager",
-                                    "name": "df.target.damager.player.tc"
-                                },
-                                "damagerEntityTarget": {
-                                    "match": "damagerEntity",
-                                    "name": "df.target.damager.entity.tc"
-                                },
-                                "shooterTarget": {
-                                    "match": "shooter",
-                                    "name": "df.target.shooter.player.tc"
-                                },
-                                "shooterEntityTarget": {
-                                    "match": "shooterEntity",
-                                    "name": "df.target.shooter.entity.tc"
-                                },
-                                "victimTarget": {
-                                    "match": "victim",
-                                    "name": "df.target.victim.player.tc"
-                                },
-                                "victimEntityTarget": {
-                                    "match": "victimEntity",
-                                    "name": "df.target.victim.entity.tc"
-                                },
-                                "allTarget": {
-                                    "match": "allPlayers",
-                                    "name": "df.target.all.player.tc"
-                                },
-                                "allEntitiesTarget": {
-                                    "match": "allEntities",
-                                    "name": "df.target.all.entity.tc"
-                                },
-                                "allMobsTarget": {
-                                    "match": "allMobs",
-                                    "name": "df.target.all.mobs.tc"
-                                },
-                                "projectileTarget": {
-                                    "match": "projectile",
-                                    "name": "df.target.projectile.tc"
-                                },
-                                "lastSpawnedEntityTarget": {
-                                    "match": "lastSpawnedEntity",
-                                    "name": "df.target.lastSpawnedEntity.tc"
-                                }
-                            }
-                        },
-                        "genericActionDomain": {
-                            "match": "(\\w+\\s*:)\\s*(\\w*)?((?<=\\w+)\\s*:\\s*\\w+)?",
-                            "captures": {
-                                "1": {
-                                    "patterns": [{"include":"#operator"},{"include": "#target"}],
-                                    "name": "support.class.tc variable.other.object.tc"
-                                },
-                                "2": {
-                                    "name":"entity.name.function.tc"
-                                },
-                                "3": {
-                                    "patterns": [{"include":"#operator"},{"include":"#standaloneTypeName"}]
-                                }
-                            }
-                        },
-                        "genericValueDomain": {
-                            "match": "(\\w+\\s*\\.)\\s*(\\w*)?",
-                            "captures": {
-                                "1": {
-                                    "patterns": [{"include":"#operator"},{"include": "#target"}],
-                                    "name": "support.class.tc variable.other.object.tc"
-                                },
-                                "2": {
-                                    "name":"support.variable.property.tc"
-                                }
-                            }
-                        },
-                        "genericConditionDomain": {
-                            "match": "(\\w+\\s*\\?)\\s*(\\w*)?((?<=\\w+)\\s*\\?\\s*\\w+)?",
-                            "captures": {
-                                "1": {
-                                    "patterns": [{"include":"#operator"},{"include": "#target"}],
-                                    "name": "support.class.tc variable.other.object.tc"
-                                },
-                                "2": {
-                                    "name":"entity.name.function.tc"
-                                }
-                            }
-                        }
-                    }
-                },
                 "typeConstructor": {
-                    "match": "(?<=^|(?:;?\\W+))(vec|snd|csnd|loc|par|item|litem|pot)(?=\\s*\\()",
+                    "match": "csnd|litem",
                     "captures": {
                         "0": {
                             "patterns": [
-                                {"include": "#typeName"},
                                 {
                                     "match": "csnd",
                                     "name": "entity.name.type.tc support.class.tc df.item.sound.tc tc.type tc.custom-sound"
@@ -323,20 +181,28 @@
                     }
                 },
                 "parentheticFunctionCall": {
-                    "match": "([\\w]+)(?=\\s*\\(.*\\))",
-                    "name": "entity.name.function.tc"
+                    "match": "([\\w]+)(?=\\s*\\()",
+                    "name": "entity.name.function.tc",
+                    "captures": {
+                        "0": {
+                            "patterns": [
+                                {"include": "#typeName"},
+                                {"include": "#typeConstructor"}
+                            ]
+                        }
+                    }
+                },
+                "accessee": {
+                    "match": "(\\w+\\s*\\.)",
+                    "name": "support.class.tc variable.other.object.tc"
+                },
+                "accessedProperty": {
+                    "match": "(?<=\\w+\\s*\\.\\s*)(\\w+)",
+                    "name": "support.variable.property.tc"
                 },
                 "arglessFunctionCall": {
                     "match": "(?<=\\w+\\s*:\\s*)(\\w+)",
                     "name": "entity.name.function.tc"
-                },
-                "conditionCall": {
-                    "match": "(?<=\\w+\\s*\\?\\s*)(\\w+)",
-                    "name": "entity.name.function.tc df.action.if.tc"
-                },
-                "debugFunction": {
-                    "match": "__printvartype",
-                    "name": "entity.name.function.tc keyword tc.debug"
                 },
                 "braces": {
                     "patterns": [
@@ -368,94 +234,40 @@
                 {"include": "#gameEventHeader"},
                 {"include": "#functionHeader"},
                 {"include": "#processHeader"},
-                {"include": "#paramHeader"},
-                {"include": "#lagslayerCancelHeader"},
-                {"include": "#descriptionHeader"},
-                {"include": "#returnsHeader"}
+                {"include": "#lagslayerCancelHeader"}
             ],
             "repository": {
                 "playerEventHeader": {
-                    "match": "(?<=^|(;\\s*))PLAYER_EVENT(?![\\w])",
+                    "match": "(?<=^|(?:;?\\W+))playerevent(?![\\w])",
                     "name": "storage.type.tc meta.function.tc df.block.event.player.tc tc.header.codeline-type.event.player"
                 },
                 "entityEventHeader": {
-                    "match": "(?<=^|(;\\s*))ENTITY_EVENT(?![\\w])",
+                    "match": "(?<=^|(?:;?\\W+))entityevent(?![\\w])",
                     "name": "storage.type.tc meta.function.tc df.block.event.entity.tc tc.header.codeline-type.event.entity"
                 },
                 "gameEventHeader": {
-                    "match": "(?<=^|(;\\s*))GAME_EVENT(?![\\w])",
+                    "match": "(?<=^|(?:;?\\W+))gameevent(?![\\w])",
                     "name": "storage.type.tc meta.function.tc df.block.event.game.tc tc.header.codeline-type.event.game"
                 },
                 "functionHeader": {
-                    "match": "(?<=^|(;\\s*))FUNCTION(?![\\w])",
+                    "match": "(?<=^|(?:;?\\W+))function(?![\\w])",
                     "name": "storage.type.tc meta.function.tc df.block.function.tc tc.header.codeline-type.function"
                 },
                 "processHeader": {
-                    "match": "(?<=^|(;\\s*))PROCESS(?![\\w])",
+                    "match": "(?<=^|(?:;?\\W+))process(?![\\w])",
                     "name": "storage.type.tc meta.function.tc df.block.process.tc tc.header.codeline-type"
                 },
                 "lagslayerCancelHeader": {
-                    "match": "(?<=^|(;\\s*))LAGSLAYER_CANCEL(?![\\w])",
+                    "match": "(?<=^|(?:;?\\W+))lscancel(?![\\w])",
                     "name": "storage.type meta.function.tc tc.header.lagslayer-cancel"
-                },
-                "descriptionHeader": {
-                    "match": "(?<=^|(;\\s*))DESC(?![\\w])",
-                    "name": "storage.type meta.function.tc tc.header.description"
-                },
-                "returnsHeader": {
-                    "match": "(?<=^|(?:;\\s*))(RETURNS)\\s*(\\w*)?(?![\\w])",
-                    "captures": {
-                        "1": {
-                            "name": "storage.type meta.function.tc df.parameter.tc tc.header.returns"
-                        },
-                        "2": {
-                            "patterns": [
-                                {"include": "#standaloneTypeName"}
-                            ]
-                        }
-                    }
-                },
-                "paramHeader": {
-                    "match": "(?<=^|(?:;?\\W+))(PARAM)\\s*(?:(?!\\W)(\\w*)*(:)?([^=;]*)\\w*(?==|;|$))?",
-                    "captures": {
-                        "1": {
-                            "name": "storage.type meta.function.tc df.parameter.tc tc.header.parameter"
-                        },
-                        "2": {
-                            "patterns": [{"include": "#advName"}],
-                            "name": "variable.other.tc"
-                        },
-                        "3": {
-                            "patterns": [{"include": "#operator"}],
-                            "name": "comment.tc"
-                        },
-                        "4": {
-                            "patterns": [
-                                {"include": "#operator"},
-                                {"match": "(?<=^|(?:\\W+))var(?![\\w])","name": "entity.name.type.tc support.class.tc tc.type df.item.variable.tc"},
-                                {"include": "#standaloneTypeName"}
-                            ]
-                        }
-                    }
-                },
-                "paramHeaderOld": {
-                    "match": "(?<=^|(?:;?\\W+))(PARAM)(?![\\w])\\s*(\\[\\]|\\[(?:\\\\\\]|[^\\]])*[^\\\\]\\]|\\[.*|\\w*)?",
-                    "captures": {
-                        "1": {
-                            "name": "storage.type meta.function.tc df.parameter.tc tc.header.parameter"
-                        }
-                    }
                 }
             }
         },
         "standaloneTypeName": {
-            "match": "(?<=^|(?:;?\\W+))((?:(?:optional|plural|str|num|vec|loc|pot|snd|txt|item|list|dict|par|any)\\s*)+)(?![\\w])",
+            "match": "(?<=^|(?:;?\\W+))((?:(?:str|num|vec|loc|pot|snd|txt|item|list|dict|par|any)\\s*)+)(?![\\w])",
             "captures": {
-                "1": {
-                    "patterns": [
-                        {"include": "#typeName"},
-                        {"include": "#paramModifierKeyword"}
-                    ]
+                "0": {
+                    "patterns": [{"include": "#typeName"}]
                 }
             }
         },
@@ -538,12 +350,8 @@
             "name": "keyword.operator.tc"
         },
         "controlKeyword": {
-            "match": "(?<=^|(;?\\W+))(if|repeat|else|do|while|for|in|on|to|return|returnmult|break|continue|endthread|endallthreads|wait|print|printRaw|printError|printWarning)(?![\\w])",
+            "match": "(?<=^|(;?\\W+))(if|repeat|else|do|while|for|as|of|to|return|returnmult|break|continue|endthread|endallthreads|wait|print|printRaw|printError|printWarning)(?![\\w])",
             "name": "keyword.control.tc"
-        },
-        "paramModifierKeyword": {
-            "match": "(?<=^|(;?\\W+))(optional|plural)(?![\\w])",
-            "name": "storage.type meta.function.tc tc.header.parameter-modifier"
         },
         "selectKeyword": {
             "patterns": [
@@ -562,7 +370,7 @@
             }
         },
         "commentedLine": {
-            "match": "#.*",
+            "match": "//.*",
             "name": "comment.tc"
         },
         "semicolon": {
