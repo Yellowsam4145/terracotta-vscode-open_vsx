@@ -14,12 +14,12 @@
                 {"include": "#commentedLine"},
                 {"include": "#braces"},
                 {"include": "#string"},
+                {"include": "#hexNumber"},
+                {"include": "#number"},
                 {"include": "#parentheticFunctionCall"},
                 {"include": "#accessedProperty"},
                 {"include": "#accessee"},
                 {"include": "#standaloneTypeName"},
-                {"include": "#hexNumber"},
-                {"include": "#number"},
                 {"include": "#arglessFunctionCall"},
                 {"include": "#callCustomFunction"},
                 {"include": "#controlKeyword"},
@@ -28,11 +28,11 @@
             ],
             "repository": {
                 "number": {
-                    "match": "(?:(?<![A-z0-9_]\\s*)-)?(?!_)((?:\\d|_(?!\\.))**\\.?(0[bB])?(?!_)(?:\\d|_(?![^0-9]))+)",
+                    "match": "(?<![A-z0-9_])(?!_)((?:\\d|_(?!\\.))*\\.?(0[bB])?(?!_)(?:\\d|_(?![^0-9]))+)",
                     "name": "constant.numeric.tc"
                 },
                 "hexNumber": {
-                    "match": "(?:(?<![A-z0-9_]\\s*)-)?(?!_)((?:[0-9A-fa-f]|_(?!\\.))*(0[xX])\\.?(?!_)(?:[0-9A-fa-f]|_(?![^0-9A-fa-f]))+)",
+                    "match": "(?<![A-z0-9_])(?!_)((?:[0-9A-fa-f]|_(?!\\.))*(0[xX])\\.?(?!_)(?:[0-9A-fa-f]|_(?![^0-9A-fa-f]))+)",
                     "name": "constant.numeric.tc"
                 },
                 "callCustomFunction": {
@@ -164,7 +164,7 @@
                     }
                 },
                 "typeConstructor": {
-                    "match": "csnd|litem",
+                    "match": "(?<=^|(?:;?\\W+))((?:(?:csnd|litem)\\s*)+)(?![\\w])",
                     "captures": {
                         "0": {
                             "patterns": [
@@ -186,7 +186,7 @@
                     "captures": {
                         "0": {
                             "patterns": [
-                                {"include": "#typeName"},
+                                {"include": "#standaloneTypeName"},
                                 {"include": "#typeConstructor"}
                             ]
                         }
