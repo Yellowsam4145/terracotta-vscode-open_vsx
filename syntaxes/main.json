@@ -265,7 +265,7 @@
             }
         },
         "standaloneTypeName": {
-            "match": "(?<=^|(?:;?\\W+))((?:(?:str|num|vec|loc|pot|snd|txt|item|list|dict|par|any)\\s*)+)(?![\\w])",
+            "match": "(?<=^|(?:;?\\W+))((?:(?:str|num|vec|loc|pot|snd|txt|item|list|dict|par|any|void)\\s*)+)(?![\\w])",
             "captures": {
                 "0": {
                     "patterns": [{"include": "#typeName"}]
@@ -285,7 +285,8 @@
                 {"include": "#listName"},
                 {"include": "#dictName"},
                 {"include": "#parName"},
-                {"include": "#anyName"}
+                {"include": "#anyName"},
+                {"include": "#voidName"}
             ],
             "repository": {
                 "strName": {
@@ -335,6 +336,10 @@
                 "anyName": {
                     "match": "any",
                     "name": "entity.name.type.tc support.class.tc tc.type df.item.any.tc"
+                },
+                "voidName": {
+                    "match": "void",
+                    "name": "entity.name.type.tc support.class.tc tc.type"
                 }
             }
         },
