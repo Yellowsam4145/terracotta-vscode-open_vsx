@@ -3,10 +3,10 @@
     "patterns": [ 
         {"include": "#blockComment"},
         {"include": "#commentedLine"},
+        {"include": "#expression"},
         {"include": "#controlKeyword"},
         {"include": "#selectKeyword"},
         {"include": "#headerKeyword"},
-        {"include": "#expression"},
         {"include": "#semicolon"}
     ],
     "repository": {
@@ -182,7 +182,7 @@
                     }
                 },
                 "parentheticFunctionCall": {
-                    "match": "([\\w]+)(?=\\s*\\()",
+                    "match": "([\\w]+)(?<!if|repeat|while|for|endthread|endallthreads|wait|print|perselected)(?=\\s*\\()",
                     "name": "entity.name.function.tc",
                     "captures": {
                         "0": {
@@ -200,10 +200,6 @@
                 "accessedProperty": {
                     "match": "(?<=\\w+\\s*\\.\\s*)(\\w+)",
                     "name": "support.variable.property.tc"
-                },
-                "arglessFunctionCall": {
-                    "match": "(?<=\\w+\\s*:\\s*)(\\w+)",
-                    "name": "entity.name.function.tc"
                 },
                 "braces": {
                     "patterns": [
