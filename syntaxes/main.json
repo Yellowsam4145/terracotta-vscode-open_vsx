@@ -261,7 +261,7 @@
             }
         },
         "standaloneTypeName": {
-            "match": "(?<=^|(?:;?\\W+))((?:(?:str|num|vec|loc|pot|snd|txt|item|list|dict|par|any|void)\\s*)+)(?![\\w])",
+            "match": "(?<=^|(?:;?\\W+))((?:(?:str|num|vec|loc|pot|snd|txt|item|list|dict|par|any|void|var)\\s*)+)(?![\\w])",
             "captures": {
                 "0": {
                     "patterns": [{"include": "#typeName"}]
@@ -281,6 +281,7 @@
                 {"include": "#listName"},
                 {"include": "#dictName"},
                 {"include": "#parName"},
+                {"include": "#varName"},
                 {"include": "#anyName"},
                 {"include": "#voidName"}
             ],
@@ -328,6 +329,10 @@
                 "parName": {
                     "match": "par",
                     "name": "entity.name.type.tc support.class.tc tc.type df.item.particle.tc"
+                },
+                "varName": {
+                    "match": "var",
+                    "name": "entity.name.type.tc support.class.tc tc.type df.item.variable.tc"
                 },
                 "anyName": {
                     "match": "any",
