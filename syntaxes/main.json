@@ -357,7 +357,7 @@
             "name": "keyword.operator.tc"
         },
         "controlKeyword": {
-            "match": "(?<=^|(;?\\W+))(if|repeat|else|do|while|for|as|of|to|return|returnmult|break|continue|endthread|endallthreads|wait|print|printRaw|printError|printWarning)(?![\\w])",
+            "match": "(?<=^|(;?\\W+))(if|repeat|else|do|while|for|as|of|to|return|returnmult|break|continue|endthread|endallthreads|wait|print|perselected)(?![\\w])",
             "name": "keyword.control.tc"
         },
         "selectKeyword": {
