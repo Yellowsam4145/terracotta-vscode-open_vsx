@@ -490,7 +490,7 @@ async function handleNotification(notification: Notification) {
 function requestToken() {
     sendRequest(
         new RequestTokenA2CRequest(
-            "terracotta",
+            "Terracotta",
             [
                 Permission.EDIT_CODE,
                 Permission.EDIT_LIBRARY_ITEMS,
