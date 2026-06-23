@@ -487,6 +487,7 @@ async function handleNotification(notification: Notification) {
     }
 }
 
+
 function requestToken() {
     sendRequest(
         new RequestTokenA2CRequest(
@@ -505,6 +506,7 @@ function requestToken() {
             if (response instanceof ErrorResponse) {
                 // TODO: prompt to refresh connection
                 window.showErrorMessage(`Could not connect to Terracotta client: ${response.errorMessage}`);
+                await extensionContext.secrets.delete('tcclient_token');
                 close();
             } else if (response instanceof RequestTokenC2AResponse) {
                 token = response.token;
@@ -555,6 +557,13 @@ function fireConnectionStatusChanged() {
 
 export function initialize(context: ExtensionContext) {
     extensionContext = context;
+
+    extensionContext.secrets.onDidChange(e => {
+        // if some other window just got a token authenticated, reconnect and use that token
+        if (e.key == 'tcclient_token' && extensionContext.secrets.get('tcclient_token') != undefined && isConnected && !isAuthed) {
+            tryConnection();
+        }
+    })
 }
 
 export async function tryConnection() {
