@@ -145,12 +145,14 @@ export class RequestTokenA2CRequest extends Request {
     constructor(
         public appName: string,
         public permissions: Permission[],
+        public lifetime?: "MONTH" | "WEEK" | "DAY" | "SESSION"
     ) { super(RequestMethod.REQUEST_TOKEN); }
 
     protected override buildOn(out: any) {
         super.buildOn(out);
         out.data.app_name = this.appName;
         out.data.permissions = this.permissions;
+        out.data.lifetime = this.lifetime;
     }
 } 
 export class RequestTokenC2AResponse extends Response {
@@ -519,7 +521,8 @@ function requestToken() {
                 Permission.GET_PLOT_INFO,
                 Permission.GET_MODE_INFO,
                 Permission.CHANGE_MODE,
-            ]
+            ],
+            "MONTH"
         ), 
         async (request, response: RequestTokenC2AResponse) => {
             if (response instanceof ErrorResponse) {
