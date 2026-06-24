@@ -22,6 +22,7 @@ enum Permission {
 enum RequestMethod {
     REQUEST_TOKEN = "REQUEST_TOKEN",
     PROVIDE_TOKEN = "PROVIDE_TOKEN",
+    DISPOSE_TOKEN = "DISPOSE_TOKEN",
     INITIATE_CODE_EDIT = "INITIATE_CODE_EDIT",
     CHANGE_MODE = "CHANGE_MODE",
     START_EDITING_ITEM = "START_EDITING_ITEM",
@@ -180,6 +181,24 @@ export class ProvideTokenC2AResponse extends Response {
 
     static override parse(msgJson: any): ProvideTokenC2AResponse {
         return new ProvideTokenC2AResponse();
+    }
+}
+
+//=- dispose token -=\\
+export class DisposeTokenA2CRequest extends Request {
+    override readonly RESPONSE_CLASS = DisposeTokenC2AResponse;
+
+    constructor() { super(RequestMethod.DISPOSE_TOKEN); }
+
+    protected override buildOn(out: any) {
+        super.buildOn(out);
+    }
+} 
+export class DisposeTokenC2AResponse extends Response {
+    constructor() {super(); }
+
+    static override parse(msgJson: any): DisposeTokenC2AResponse {
+        return new DisposeTokenC2AResponse();
     }
 }
 
@@ -551,7 +570,11 @@ export function onConnectionStatusChanged(callback: ConnectionStatusCallback) {
 
 function fireConnectionStatusChanged() {
     for (const callback of connectionStatusCallbacks) {
-        callback(isConnected, isAuthed);
+        try {
+            callback(isConnected, isAuthed);
+        } catch (e) {
+            console.error(e);
+        }
     }
 }
 
@@ -682,9 +705,10 @@ export function close() {
  * Deletes the stored token, closes tcclient connection, then reconnects to prompt creation of a new token
  */
 export async function refreshToken() {
-    await extensionContext.secrets.delete("tcclient_token"); 
     if (!isConnected) return;
-    close();
+    await sendRequestAsync(new DisposeTokenA2CRequest()); // this will also disconnect vscode
+    await extensionContext.secrets.delete("tcclient_token"); 
+
     // this is terrible goofy ass awful waiting code please never do this
     const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
     while (isConnected === true) {

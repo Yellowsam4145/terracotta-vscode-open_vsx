@@ -1593,7 +1593,7 @@ export function activate(context: vscode.ExtensionContext) {
 		}
 	})
 
-	//= status bar =\\
+	//= status bar and disconnect handling =\\
 
 	const versionStatusBarItem = vscode.window.createStatusBarItem("terracottaVersion",vscode.StatusBarAlignment.Right,-300)
 	versionStatusBarItem.name = "Terracotta Version"
@@ -1622,6 +1622,11 @@ export function activate(context: vscode.ExtensionContext) {
 			tcClientStatusBarItem.text = "$(close)Awaiting permission in MC"
 			tcClientStatusBarItem.backgroundColor = new vscode.ThemeColor("statusBarItem.warningBackground")
 			tcClientStatusBarItem.command = "extension.terracotta.info.tcClientAuth"
+
+			for (const key of Object.keys(itemsBeingEdited)) {
+				delete itemsBeingEdited[key];
+			}
+			if (itemEditorProvider) itemEditorProvider.refresh();
 		}
 	});
 	
@@ -1630,11 +1635,16 @@ export function activate(context: vscode.ExtensionContext) {
 	vscode.commands.registerCommand("extension.terracotta.refreshAuthentication", () => {
 		if (TCClient.isConnected) {
 			vscode.window.showInformationMessage("Refreshing authentication, check your Minecraft Client");
+			TCClient.refreshToken();
 		} else {
-			vscode.window.showInformationMessage("Old token was deleted, you will be prompted to reauthenticate when you start your Minecraft client");
+			vscode.window.showErrorMessage("Authentication cannot be refreshed unless Terracotta is connected to Minecraft");
+			TCClient.tryConnection();
 		}
-		TCClient.refreshToken();
 	});
+
+	vscode.commands.registerCommand("extension.terracotta.refreshConnection",() => {
+		TCClient.tryConnection();
+	})
 
 	vscode.commands.registerCommand("extension.terracotta.test",async () => {
 		// TCClient.sendRequest(
@@ -1652,10 +1662,6 @@ export function activate(context: vscode.ExtensionContext) {
 		// 		}
 		// 	}
 		// )
-	})
-
-	vscode.commands.registerCommand("extension.terracotta.refreshCodeClient",() => {
-		CodeClient.tryConnection();
 	})
 
 	vscode.commands.registerCommand("extension.terracotta.info.tcClientAuth",() => {

@@ -360,11 +360,6 @@
 				"icon": "$(play)"
 			},
 			{
-				"command": "extension.terracotta.refreshCodeClient",
-				"title": "Refresh CodeClient Connection",
-				"category": "Terracotta"
-			},
-			{
 				"command": "extension.terracotta.importCodeValue",
 				"title": "Import Code Value From Minecraft",
 				"category": "Terracotta",
@@ -384,6 +379,11 @@
 			{
 				"command": "extension.terracotta.refreshAuthentication",
 				"title": "Refresh Terracotta Authentication",
+				"category": "Terracotta"
+			},
+			{
+				"command": "extension.terracotta.refreshConnection",
+				"title": "Refresh Connection",
 				"category": "Terracotta"
 			},
 			{
