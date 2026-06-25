@@ -486,6 +486,12 @@ const activeRequests: Map<number, Request> = new Map();
 const notificationCallbacks: Set<NotificationCallback> = new Set();
 const connectionStatusCallbacks: Set<ConnectionStatusCallback> = new Set();
 
+let autoConnect = true;
+export async function setAutoConnect(val: boolean | undefined) {
+    if (val === undefined) { val = false; }
+    autoConnect = val;
+}
+
 async function handleResponse(request: Request, response: Response) {
     for (const callback of request.responseCallbacks) {
         callback(request, response);
@@ -721,5 +727,5 @@ export async function refreshToken() {
 }
 
 setInterval(() => {
-    if (!isConnected) tryConnection()
+    if (!isConnected && autoConnect) tryConnection()
 },10000)

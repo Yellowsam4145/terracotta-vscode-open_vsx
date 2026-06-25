@@ -7,7 +7,7 @@ Provides the following features for Terracotta:
 - Syntax highlighting
 - Signature help
 - Easy interfacing with item libraries
-- CodeClient integration
+- Direct integration with Minecraft
 
 For more information on Terracotta, see https://owlfroggy.github.io/terracotta-docs/
 

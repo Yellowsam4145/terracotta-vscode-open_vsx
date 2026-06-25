@@ -85,10 +85,10 @@
 					"description": "The version of the language server/compiler to use. The recommended way to change this setting is through the 'Terracotta v.X.X.X' button in the bottom right of the window.",
 					"default": ""
 				},
-				"terracotta.autoConnectToCodeClient": {
+				"terracotta.autoConnectToTerracottaClient": {
 					"scope": "window",
 					"type": "boolean",
-					"description": "Automatically attempt to connect to CodeClient every 10 seconds.",
+					"description": "Automatically attempt to connect to Terracotta Client every 10 seconds.",
 					"default": true
 				},
 				"terracotta.useSourceCode": {
@@ -187,14 +187,6 @@
 				},
 				{
 					"command": "extension.terracotta.itemEditor.copyItemConstructor",
-					"when": "false"
-				},
-				{
-					"command": "extension.terracotta.compileEditorSend",
-					"when": "false"
-				},
-				{
-					"command": "extension.terracotta.compileEditorCopy",
 					"when": "false"
 				},
 				{
@@ -348,18 +340,6 @@
 				"icon": "$(files)"
 			},
 			{
-				"command": "extension.terracotta.compileEditorSend",
-				"title": "Compile File & Send to CodeClient",
-				"category": "Terracotta",
-				"icon": "$(run-above)"
-			},
-			{
-				"command": "extension.terracotta.compileEditorCopy",
-				"title": "Compile File & Copy to Clipboard",
-				"category": "Terracotta",
-				"icon": "$(play)"
-			},
-			{
 				"command": "extension.terracotta.importCodeValue",
 				"title": "Import Code Value From Minecraft",
 				"category": "Terracotta",
@@ -419,8 +399,7 @@
 									"sendToMinecraft"
 								],
 								"enumDescriptions": [
-									"Uses codeclient's placer to automatically add code to a plot",
-									"Saves code templates to files"
+									"Uses Terracotta Client's code placer to automatically add code to a plot"
 								],
 								"default": "sendToMinecraft"
 							},
@@ -467,7 +446,7 @@
 						"request": "launch",
 						"name": "Compile Project",
 						"folder": "${workspaceFolder}",
-						"exportMode": "sendToCodeClient",
+						"exportMode": "sendToMinecraft",
 						"autoSwitchToDev": true,
 						"autoSwitchToPlay": true,
 						"plotSize": 50
@@ -475,14 +454,14 @@
 				],
 				"configurationSnippets": [
 					{
-						"label": "Terracotta: Compile to CodeClient",
-						"description": "Compiles the project and sends the results to codeclient",
+						"label": "Terracotta: Compile to Plot",
+						"description": "Compiles the project and sends the results to Terracotta Client to be automatically placed",
 						"body": {
 							"type": "terracotta",
 							"request": "launch",
 							"name": "Compile Project",
-							"folder": "^\"\\${workspaceFolder}\"",
-							"exportMode": "sendToCodeClient",
+							"folder": "${workspaceFolder}",
+							"exportMode": "sendToMinecraft",
 							"autoSwitchToDev": true,
 							"autoSwitchToPlay": true,
 							"plotSize": 50

@@ -1,9 +1,7 @@
 import * as cp from "child_process";
 import * as path from "path"
 import * as vscode from 'vscode';
-import { RawData, WebSocket } from 'ws';
 import { LanguageClient, LanguageClientOptions, ServerOptions, StreamMessageReader } from 'vscode-languageclient/node';
-import { DebuggerExtraInfo } from "./debugger";
 import * as fs from "fs/promises"
 import * as os from "os"
 import { fileURLToPath, pathToFileURL, URL } from "url";
@@ -16,7 +14,6 @@ import * as NBTTypes from "nbtify"
 const NBT: typeof NBTTypes = require("fix-esm").require("nbtify");
 import { VersionManager } from "./versionManager";
 import { compareVersions } from "./util/compareVersions";
-import * as CodeClient from "./codeclientManager";
 import * as TCClient from "./terracottaClientManager";
 
 //the current DF_NBT value df uses. keeping this updated is required
@@ -39,10 +36,6 @@ let areLibrariesLoaded: boolean = false
 //layer 2 = libraries (key: library id, value: dict of items)
 //layer 3 = items (key: item id, value: true if being edited, undefined if not)
 let itemsBeingEdited: Dict<Dict<Dict<boolean>>> = {}
-let itemImportId: number | undefined //will be undefined if no item is being edited
-let returnItemBeingImported: ((value: any) => void) | undefined
-
-let updateCodeClientStatusBar: () => void
 
 let versionManager: VersionManager
 
@@ -768,7 +761,6 @@ async function startItemLibraryEditor(context: vscode.ExtensionContext) {
 	})
 
 	vscode.commands.registerCommand("extension.terracotta.itemEditor.startEditingItem",async (treeItem: ItemTreeItem) => {
-		// CodeClient.sendMessage(`give ${NBT.stringify(parsed)}`)
 		let response = await TCClient.sendRequestAsync(new TCClient.StartEditingItemA2CRequest(
 			treeItem.library.projectURL.toString(),
 			treeItem.library.id,
@@ -1151,12 +1143,6 @@ async function startLanguageServer() {
 	})
 }
 
-// scopes: await CodeClient.getScopes(),
-// mode: await CodeClient.getMode(),
-// terracottaInstallPath: useSourceCode ? sourcePath : terracottaPath,
-// useSourceCode: useSourceCode,
-// rank: getConfigValue("rank"),
-
 async function buildToMinecraft(debugSession: vscode.DebugSession, launchArguments: any): Promise<void> {
 	function bluelog(message: any) {
 		console.log(message);
@@ -1308,12 +1294,11 @@ async function buildToMinecraft(debugSession: vscode.DebugSession, launchArgumen
 				newHashFileContents += hash+" "+name+"\n"
 			}
 
-			//create codeclient commands
+			//figure out what edits need to occur
 			seenTemplates[headerFileType]!.forEach(templateName => {
 				if (templateName === undefined) { return; }
 				// if template needs to be broken
 				if (!(templateName in hashes)) {
-					console.log(headerTemplateType, templateName)
 					breakTemplates.push({type: headerTemplateType, name: templateName})
 					changedTemplateCount += 1;
 				}
@@ -1336,9 +1321,6 @@ async function buildToMinecraft(debugSession: vscode.DebugSession, launchArgumen
 			log(`No template changes detected since last compilation`);		
 			await fs.rename(newHashFilePath,hashFilePath)
 			end(0); return;
-			// if (launchArguments.autoSwitchToPlay) {
-			// 	await changeMode(TCClient.DFMode.PLAY);
-			// }
 		}
 
 		// make sure minecraft state is correct
@@ -1357,7 +1339,7 @@ async function buildToMinecraft(debugSession: vscode.DebugSession, launchArgumen
 		if (TCClient.mode != TCClient.DFMode.DEV) {
 			if (autoSwitchToDev) {
 				log(`Switching to dev mode (currently in ${TCClient.mode.toLowerCase()})`);
-				await changeMode(TCClient.DFMode.DEV);  //- TEST
+				await changeMode(TCClient.DFMode.DEV);
 			} else {
 				log(`You are currently in ${TCClient.mode} mode. Please switch to dev or add '"autoSwitchToDev": true' to your launch configuration.`);
 				end(1); return;
@@ -1460,138 +1442,7 @@ export function activate(context: vscode.ExtensionContext) {
 	TCClient.initialize(context)
 	TCClient.tryConnection();
 
-	//= codeclient stuff =\\
-	CodeClient.setAutoConnect(getConfigValue("autoConnectToCodeClient"))
-
-	CodeClient.attachCallback("codeModeLeft",async () => {
-		stopEditingAllItems()
-		// itemsBeingEdited = {}
-	})
-
-	CodeClient.attachCallback("messageRecieved",async (message: string) => {
-		for (const session of Object.values(debuggers)) {
-            session.customRequest("codeclientMessage",message)
-        }
-	})
-
-	CodeClient.attachCallback("heartbeat",async (inventory: NBTTypes.ListTagLike) => {
-		let modifiedLibraries: Map<ItemLibraryFile, true> = new Map()
-		let editingItemsInInventory: Dict<Dict<Dict<boolean>>> = {} //works the same as itemsBeingEdited
-
-		let invIndiciesToRemove: number[] = []
-		let invIndiciesToClearImportTags: number[] = []
-		//first and second layer dicts are project and library id respectively
-		//key: item id = data if the item shoudl be updated, number representing what slot to remove if not
-		let itemsToUpdate: Dict<Dict<Dict<any>>> = {}
-		let itemIdSlots: Dict<number[]> = {}
-		let itemsWereModified = false
-
-		let i = -1
-		for (const item of inventory) {
-			i++
-			let tags = item.components?.["minecraft:custom_data"]?.PublicBukkitValues
-			let editorData = item.components?.["minecraft:custom_data"]?.terracottaEditorItem
-			//editor item
-			if (editorData && "itemid" in editorData && "libid" in editorData && "project" in editorData) {
-				let project = editorData["project"]
-				let libraryId = editorData["libid"]
-				let itemId = editorData["itemid"]
-
-				//if this is an editor item but its not for anything thats actually being edited, mark it for removal
-				if (!itemsBeingEdited?.[project]?.[libraryId]?.[itemId]) {
-					invIndiciesToRemove.push(i)
-					continue
-				}
-
-				//add to editingItemsInInventory list
-				ensurePathExistance(editingItemsInInventory, project, libraryId)[itemId] = true
-				//add to itemsToUpdate list
-				ensurePathExistance(itemsToUpdate, project, libraryId)
-
-				//if the same item is present in the inventory multiple times, don't let it be updated
-				if (itemId in itemsToUpdate[project]![libraryId]!) {
-					itemsToUpdate[project]![libraryId]![itemId] = false
-				} else {
-					itemsToUpdate[project]![libraryId]![itemId] = item
-					itemIdSlots[itemId] = []
-				}
-
-				itemIdSlots[itemId]!.push(i)
-			}
-			//importer item
-			else if (tags && "hypercube:__tc_ii_import" in tags) {
-				//import item
-				if (itemImportId && tags["hypercube:__tc_ii_import"] == itemImportId) {
-					if (returnItemBeingImported) {
-						returnItemBeingImported(item)
-					}
-				}
-				//this item's import data doesn't match the current id and is useless
-				//so the tag should be removed to avoid cluttering the item's nbt
-				else {
-					itemsWereModified = true
-					invIndiciesToClearImportTags.push(i)
-				}
-			}
-		}
-
-		//update items
-		for (const [project, libraries] of Object.entries(itemsToUpdate)) {
-			for (const [libraryId, items] of Object.entries(libraries!)) {
-				for (const [itemId, item] of Object.entries(items!)) {
-					//this means the item shouldn't be updated for whatever reason
-					if (item == false) {
-						invIndiciesToRemove.push(...itemIdSlots[itemId]!)
-					}
-					//actually save the item's changes
-					else {
-						let library = itemLibraries[project]![libraryId]!
-
-						try {
-							addItemDataToLibrary(library, itemId, item)
-						} catch (e) {
-							vscode.window.showErrorMessage("Could not add item", {
-								modal: true,
-								detail: `${e}`
-							})
-						}
-
-						modifiedLibraries.set(library, true)
-					}
-				}
-			}
-		}
-
-		//unmark items as being edtied if they have been removed from the inventory
-		let itemsWereRemoved = false
-		for (const [project, libraries] of Object.entries(itemsBeingEdited)) {
-			for (const [libraryId, items] of Object.entries(libraries!)) {
-				for (const itemId of Object.keys(items!)) {
-					if (!editingItemsInInventory[project]?.[libraryId]?.[itemId]) {
-						itemsWereRemoved = true
-						stopEditingLocally(project, libraryId, itemId)
-					}
-				}
-			}
-		}
-
-		CodeClient.queueInvIndiciesForImportRemoval(invIndiciesToClearImportTags)
-		//remove editor items that aren't actively being edited
-		if (invIndiciesToRemove.length > 0) {
-			itemsWereModified = true
-			CodeClient.queueInvIndiciesForClear(invIndiciesToRemove)
-		}
-
-		//save libraries
-		for (const library of modifiedLibraries.keys()) {
-			await saveLibrary(library)
-		}
-
-		//only bother updating if stuff actually changed
-		if (itemsWereModified || itemsWereRemoved) {
-			itemEditorProvider.refresh()
-		}
-	})
+	TCClient.setAutoConnect(getConfigValue("autoConnectToTerracottaClient"))
 
 	//= status bar and disconnect handling =\\
 
@@ -1669,189 +1520,189 @@ export function activate(context: vscode.ExtensionContext) {
 	})
 
 	vscode.commands.registerCommand("extension.terracotta.importCodeValue",async () => {		
-		let qp = vscode.window.createQuickPick()
-		qp.title = "Item Converter"
-		qp.placeholder = "Click on an item icon to convert it and copy it to the clipboard"
-		qp.ignoreFocusOut = true
-		qp.canSelectMany = false
-		qp.onDidAccept(() => {
-			npc.copy((qp.activeItems[0] as any).value)
-			qp.dispose()
-		})
-		qp.items = (await CodeClient.getInventory()).map(nbt => {
-			const codeValueString = nbt.components?.["minecraft:custom_data"]?.["PublicBukkitValues"]?.["hypercube:varitem"]
-			if (!codeValueString) { return null }
+		// let qp = vscode.window.createQuickPick()
+		// qp.title = "Item Converter"
+		// qp.placeholder = "Click on an item icon to convert it and copy it to the clipboard"
+		// qp.ignoreFocusOut = true
+		// qp.canSelectMany = false
+		// qp.onDidAccept(() => {
+		// 	npc.copy((qp.activeItems[0] as any).value)
+		// 	qp.dispose()
+		// })
+		// qp.items = (await CodeClient.getInventory()).map(nbt => {
+		// 	const codeValueString = nbt.components?.["minecraft:custom_data"]?.["PublicBukkitValues"]?.["hypercube:varitem"]
+		// 	if (!codeValueString) { return null }
 			
-			let codeValue: any
-			try {
-				codeValue = JSON.parse(codeValueString)
-			} catch (e) {return null}
+		// 	let codeValue: any
+		// 	try {
+		// 		codeValue = JSON.parse(codeValueString)
+		// 	} catch (e) {return null}
 
-			function convertString(s: string): string {
-				return ('"' + s
-					.replaceAll("\\","\\\\")
-					.replaceAll('"','\\"')
-					.replaceAll("\n","\\n")
-					.replaceAll(/&(?=[abcdef0123456789lmnork])/g,"\&")
-					.replaceAll(/§(?=[abcdef0123456789lmnork])/g,"&")
-				+ '"')
-			}
+		// 	function convertString(s: string): string {
+		// 		return ('"' + s
+		// 			.replaceAll("\\","\\\\")
+		// 			.replaceAll('"','\\"')
+		// 			.replaceAll("\n","\\n")
+		// 			.replaceAll(/&(?=[abcdef0123456789lmnork])/g,"\&")
+		// 			.replaceAll(/§(?=[abcdef0123456789lmnork])/g,"&")
+		// 		+ '"')
+		// 	}
 
-			function convertNumber(n: number): string {
-				return (n
-					.toFixed(3)
-					.replace(/(?<!^)(?:\.|(?<=[^0]))0+$/,"") //remove trailing decimal places
-				)
-			}
+		// 	function convertNumber(n: number): string {
+		// 		return (n
+		// 			.toFixed(3)
+		// 			.replace(/(?<!^)(?:\.|(?<=[^0]))0+$/,"") //remove trailing decimal places
+		// 		)
+		// 	}
 
-			let converted: string
-			let args = []
-			switch (codeValue.id) {
-				case "num":
-					// %math expressions currently cannot be expressed in terracotta
-					if (codeValue.data.name.includes("%")) {return null}
-					converted = codeValue.data.name
-					break
-				case "txt": //string, NOT STYLED TEXT
-					converted = convertString(codeValue.data.name)
-					break
-				case "comp": //styled text
-					converted = "s"+convertString(codeValue.data.name)
-					break
-				case "loc":
-					args = [
-						convertNumber(codeValue.data.loc.x),
-						convertNumber(codeValue.data.loc.y),
-						convertNumber(codeValue.data.loc.z),
-					]
-					if (codeValue.data.loc.pitch !== 0 || codeValue.data.loc.yaw !== 0) {
-						args.push(
-							convertNumber(codeValue.data.loc.pitch),
-							convertNumber(codeValue.data.loc.yaw),
-						)
-					}
-					converted = `loc(${args.join(", ")})`
-					break
-				case "vec":
-					args = [
-						convertNumber(codeValue.data.x),
-						convertNumber(codeValue.data.y),
-						convertNumber(codeValue.data.z),
-					]
-					converted = `vec(${args.join(", ")})`
-					break
-				case "snd":
-					let constructorType = codeValue.data.key ? "csnd" : "snd"
-					args = [
-						convertString(codeValue.data.key ?? codeValue.data.sound)
-					]
-					if (codeValue.data.vol !== 2 || codeValue.data.variant) {
-						args.push(
-							convertNumber(codeValue.data.pitch),
-							convertNumber(codeValue.data.vol),
-						)
-						if (codeValue.data.variant) {
-							args.push(convertString(codeValue.data.variant))
-						}
-					} else if (codeValue.data.pitch !== 1) {
-						args.push(convertNumber(codeValue.data.pitch))
-					}
-					converted = `${constructorType}(${args.join(", ")})`
-					break
-				case "part":
-					let fields: {[key: string]: string} = {}
-					const pdata = codeValue.data.data
+		// 	let converted: string
+		// 	let args = []
+		// 	switch (codeValue.id) {
+		// 		case "num":
+		// 			// %math expressions currently cannot be expressed in terracotta
+		// 			if (codeValue.data.name.includes("%")) {return null}
+		// 			converted = codeValue.data.name
+		// 			break
+		// 		case "txt": //string, NOT STYLED TEXT
+		// 			converted = convertString(codeValue.data.name)
+		// 			break
+		// 		case "comp": //styled text
+		// 			converted = "s"+convertString(codeValue.data.name)
+		// 			break
+		// 		case "loc":
+		// 			args = [
+		// 				convertNumber(codeValue.data.loc.x),
+		// 				convertNumber(codeValue.data.loc.y),
+		// 				convertNumber(codeValue.data.loc.z),
+		// 			]
+		// 			if (codeValue.data.loc.pitch !== 0 || codeValue.data.loc.yaw !== 0) {
+		// 				args.push(
+		// 					convertNumber(codeValue.data.loc.pitch),
+		// 					convertNumber(codeValue.data.loc.yaw),
+		// 				)
+		// 			}
+		// 			converted = `loc(${args.join(", ")})`
+		// 			break
+		// 		case "vec":
+		// 			args = [
+		// 				convertNumber(codeValue.data.x),
+		// 				convertNumber(codeValue.data.y),
+		// 				convertNumber(codeValue.data.z),
+		// 			]
+		// 			converted = `vec(${args.join(", ")})`
+		// 			break
+		// 		case "snd":
+		// 			let constructorType = codeValue.data.key ? "csnd" : "snd"
+		// 			args = [
+		// 				convertString(codeValue.data.key ?? codeValue.data.sound)
+		// 			]
+		// 			if (codeValue.data.vol !== 2 || codeValue.data.variant) {
+		// 				args.push(
+		// 					convertNumber(codeValue.data.pitch),
+		// 					convertNumber(codeValue.data.vol),
+		// 				)
+		// 				if (codeValue.data.variant) {
+		// 					args.push(convertString(codeValue.data.variant))
+		// 				}
+		// 			} else if (codeValue.data.pitch !== 1) {
+		// 				args.push(convertNumber(codeValue.data.pitch))
+		// 			}
+		// 			converted = `${constructorType}(${args.join(", ")})`
+		// 			break
+		// 		case "part":
+		// 			let fields: {[key: string]: string} = {}
+		// 			const pdata = codeValue.data.data
 
-					if (codeValue.data.cluster.amount !== 1) {
-						fields.Amount = convertNumber(codeValue.data.cluster.amount)
-					}
-					if (codeValue.data.cluster.horizontal !== 0 || codeValue.data.cluster.vertical !== 0) {
-						fields.Spread = `[${convertNumber(codeValue.data.cluster.horizontal)}, ${convertNumber(codeValue.data.cluster.vertical)}]`
-					}
+		// 			if (codeValue.data.cluster.amount !== 1) {
+		// 				fields.Amount = convertNumber(codeValue.data.cluster.amount)
+		// 			}
+		// 			if (codeValue.data.cluster.horizontal !== 0 || codeValue.data.cluster.vertical !== 0) {
+		// 				fields.Spread = `[${convertNumber(codeValue.data.cluster.horizontal)}, ${convertNumber(codeValue.data.cluster.vertical)}]`
+		// 			}
 
-					if (pdata.material !== undefined) {
-						fields.Material = convertString(pdata.material.toLowerCase())
-					}
+		// 			if (pdata.material !== undefined) {
+		// 				fields.Material = convertString(pdata.material.toLowerCase())
+		// 			}
 
-					if (pdata.roll !== undefined) {
-						if (pdata.roll !== 0) {
-							fields.Roll = convertNumber(pdata.roll)
-						}
-					}
+		// 			if (pdata.roll !== undefined) {
+		// 				if (pdata.roll !== 0) {
+		// 					fields.Roll = convertNumber(pdata.roll)
+		// 				}
+		// 			}
 
-					if (pdata.rgb !== undefined) {
-						fields.Color = convertString("#"+pdata.rgb.toString(16).padStart(6,"0"))
-						if (pdata.rgb_fade !== undefined) {
-							fields["Fade Color"] = convertString("#"+pdata.rgb_fade.toString(16).padStart(6,"0"))
-						}
-						fields["Color Variation"] = convertNumber(pdata.colorVariation)
-					}
+		// 			if (pdata.rgb !== undefined) {
+		// 				fields.Color = convertString("#"+pdata.rgb.toString(16).padStart(6,"0"))
+		// 				if (pdata.rgb_fade !== undefined) {
+		// 					fields["Fade Color"] = convertString("#"+pdata.rgb_fade.toString(16).padStart(6,"0"))
+		// 				}
+		// 				fields["Color Variation"] = convertNumber(pdata.colorVariation)
+		// 			}
 
-					if (pdata.opacity !== undefined) {
-						if (pdata.opacity !== 100) {
-							fields.Opacity = convertNumber(pdata.opacity)
-						}
-					}
+		// 			if (pdata.opacity !== undefined) {
+		// 				if (pdata.opacity !== 100) {
+		// 					fields.Opacity = convertNumber(pdata.opacity)
+		// 				}
+		// 			}
 
-					if (pdata.size !== undefined) {
-						if (pdata.size !== 1) {
-							fields.Size = convertNumber(pdata.size)
-						}
-						if (pdata.sizeVariation !== 0) {
-							fields["Size Variation"] = convertNumber(pdata.sizeVariation)
-						}
-					}
+		// 			if (pdata.size !== undefined) {
+		// 				if (pdata.size !== 1) {
+		// 					fields.Size = convertNumber(pdata.size)
+		// 				}
+		// 				if (pdata.sizeVariation !== 0) {
+		// 					fields["Size Variation"] = convertNumber(pdata.sizeVariation)
+		// 				}
+		// 			}
 
-					if (pdata.x !== undefined) {
-						if (pdata.x !== 1 || pdata.y !== 0 || pdata.z !== 0) {
-							let args = [
-								convertNumber(pdata.x),
-								convertNumber(pdata.y),
-								convertNumber(pdata.z),
-							]
-							fields.Motion = `vec(${args.join(", ")})`
-						}
-						if (pdata.motionVariation !== 100) {
-							fields["Motion Variation"] = convertNumber(pdata.motionVariation)
-						}
-					}
+		// 			if (pdata.x !== undefined) {
+		// 				if (pdata.x !== 1 || pdata.y !== 0 || pdata.z !== 0) {
+		// 					let args = [
+		// 						convertNumber(pdata.x),
+		// 						convertNumber(pdata.y),
+		// 						convertNumber(pdata.z),
+		// 					]
+		// 					fields.Motion = `vec(${args.join(", ")})`
+		// 				}
+		// 				if (pdata.motionVariation !== 100) {
+		// 					fields["Motion Variation"] = convertNumber(pdata.motionVariation)
+		// 				}
+		// 			}
 
-					if (Object.keys(fields).length > 0) {
-						converted = `par(${convertString(codeValue.data.particle)}, {${Object.entries(fields).map(e => `"${e[0]}" = ${e[1]}`).join(", ")}})`
-					} else {
-						converted = `par(${convertString(codeValue.data.particle)})`
-					}
-					break
-				case "var":
-					let varScope = codeValue.data.scope == "unsaved" ? "global" : codeValue.data.scope
-					let varName: string = codeValue.data.name
-					if (varName.match(/[^A-Za-z0-9_]/)) {
-						converted = `${varScope} (${convertString(varName)})`
-					} else {
-						converted = `${varScope} ${varName}`
-					}
-					break
-				case "pot":
-					args = [
-						convertString(codeValue.data.pot),
-					]
-					if (codeValue.data.amp != 0 || codeValue.data.dur != 1000000) {
-						args.push(convertNumber(codeValue.data.amp+1))
-						if (codeValue.data.dur != 1000000) {
-							args.push(convertNumber(codeValue.data.dur))
-						}
-					}
-					converted = `pot(${args.join(", ")})`
-					break
-				default:
-					return null
-			}
-			return {
-				label: `$(dfcodeitem-${codeValue.id}) ${converted}`,
-				value: converted
-			} as vscode.QuickPickItem
-		}).filter(v => v !== null)
-		qp.show()
+		// 			if (Object.keys(fields).length > 0) {
+		// 				converted = `par(${convertString(codeValue.data.particle)}, {${Object.entries(fields).map(e => `"${e[0]}" = ${e[1]}`).join(", ")}})`
+		// 			} else {
+		// 				converted = `par(${convertString(codeValue.data.particle)})`
+		// 			}
+		// 			break
+		// 		case "var":
+		// 			let varScope = codeValue.data.scope == "unsaved" ? "global" : codeValue.data.scope
+		// 			let varName: string = codeValue.data.name
+		// 			if (varName.match(/[^A-Za-z0-9_]/)) {
+		// 				converted = `${varScope} (${convertString(varName)})`
+		// 			} else {
+		// 				converted = `${varScope} ${varName}`
+		// 			}
+		// 			break
+		// 		case "pot":
+		// 			args = [
+		// 				convertString(codeValue.data.pot),
+		// 			]
+		// 			if (codeValue.data.amp != 0 || codeValue.data.dur != 1000000) {
+		// 				args.push(convertNumber(codeValue.data.amp+1))
+		// 				if (codeValue.data.dur != 1000000) {
+		// 					args.push(convertNumber(codeValue.data.dur))
+		// 				}
+		// 			}
+		// 			converted = `pot(${args.join(", ")})`
+		// 			break
+		// 		default:
+		// 			return null
+		// 	}
+		// 	return {
+		// 		label: `$(dfcodeitem-${codeValue.id}) ${converted}`,
+		// 		value: converted
+		// 	} as vscode.QuickPickItem
+		// }).filter(v => v !== null)
+		// qp.show()
 	})
 
 	vscode.commands.registerCommand("extension.terracotta.changeVersion",() => {
@@ -1923,76 +1774,26 @@ export function activate(context: vscode.ExtensionContext) {
 
 	//= set up debugger =\\
 
-	//split up all the async callbacks into their own group to avoid
-	//async'ing all the syncronous ones
-	vscode.debug.onDidReceiveDebugSessionCustomEvent(async event => {
-		//i would use an ACTUAL REQUEST for this but theres not a callback for that 
-		if (event.event == "requestInfo") {
-			itemsBeingEdited = {}
-			CodeClient.setCurrentTask(CodeClient.TaskType.Compiling)
-			
-			//then return the actual info
-			event.session.customRequest("returnInfo",{
-				scopes: await CodeClient.getScopes(),
-				mode: await CodeClient.getMode(),
-				terracottaInstallPath: useSourceCode ? sourcePath : terracottaPath,
-				useSourceCode: useSourceCode,
-				rank: getConfigValue("rank"),
-			} as DebuggerExtraInfo)
-		}
-		else if (event.event == "switchToDev") {
-			CodeClient.sendMessage("mode code")
-
-			let intervalId: any
-
-			function callback(message: string) {
-				if (message == "code") {
-					CodeClient.webSocket.removeListener("message",callback)
-					clearInterval(intervalId)
-					event.session.customRequest("responseNowInDev")
-				}
-			}
-
-			intervalId = setInterval(() => {
-				CodeClient.webSocket.send("mode")
-			},500)
-
-			CodeClient.webSocket.on("message",callback)
-		}
-	})
-
 	vscode.debug.onDidReceiveDebugSessionCustomEvent(event => {
 		if (event.event == "log") {
 			console.log(event.body)
 		}
 		else if (event.event == "sendLaunchArgs") {
 			let launchArgs = event.body;
-			if (launchArgs.exportMode == "sendToCodeClient" || launchArgs.exportMode == "sendToMinecraft") {
+			if (
+				launchArgs.exportMode == "sendToCodeClient" // support legacy codeclient launch configs
+				|| launchArgs.exportMode == "sendToMinecraft"
+			) {
 				buildToMinecraft(event.session, launchArgs);
 			}
-		}
-		else if (event.event == "showErrorMessage") {
-			vscode.window.showErrorMessage(event.body)
-		}
-		else if (event.event == "codeclient") {
-			CodeClient.sendMessage(event.body)
-		}
-		else if (event.event == "redoScopes") {
-			CodeClient.sendMessage(`scopes ${CodeClient.NEEDED_SCOPES}`)
-		}
-		else if (event.event == "refreshCodeClient") {
-			CodeClient.tryConnection()
 		}
 	})
 
 	vscode.debug.onDidStartDebugSession(async session => {
-		// console.log(launchArgs);
 		debuggers[session.id] = session
-		stopEditingAllItems()
 	})
 
 	vscode.debug.onDidTerminateDebugSession(session => {
-		CodeClient.setCurrentTask(CodeClient.TaskType.Idle)
 		delete debuggers[session.id]
 	})
 
@@ -2003,8 +1804,8 @@ export function activate(context: vscode.ExtensionContext) {
 			updateTerracottaPath()
 			startLanguageServer()
 		}
-		else if (event.affectsConfiguration("terracotta.autoConnectToCodeClient")) {
-			CodeClient.setAutoConnect(getConfigValue("autoConnectToCodeClient"))
+		else if (event.affectsConfiguration("terracotta.autoConnectToTerracottaClient")) {
+			TCClient.setAutoConnect(getConfigValue("autoConnectToTerracottaClient"))
 		}
 		if (client) {
 			if (event.affectsConfiguration("terracotta.rank")) {
