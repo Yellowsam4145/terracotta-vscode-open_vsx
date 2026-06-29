@@ -348,15 +348,17 @@ export class GiveItemA2CResponse extends Response {
     }
 }
 
-//=- give item -=\\
+//=- get inventory -=\\
 export class GetInventoryA2CRequest extends Request {
     override readonly RESPONSE_CLASS = GetInventoryA2CResponse;
 
     constructor(
+        public excludeDFValues: boolean
     ) { super(RequestMethod.GET_INVENTORY); }
 
     protected override buildOn(out: any) {
         super.buildOn(out);
+        out.data.exclude_df_values = this.excludeDFValues;
     }
 }
 export class GetInventoryA2CResponse extends Response {

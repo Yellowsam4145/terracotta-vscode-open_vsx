@@ -788,7 +788,7 @@ async function startItemLibraryEditor(context: vscode.ExtensionContext) {
 	vscode.commands.registerCommand("extension.terracotta.itemEditor.importItemToLibrary",async (treeItem: LibraryTreeItem) => {
 		// if (!await requireCodeClientConnection("Items cannot be imported","code")) {return}
 
-		let invResponse: TCClient.GetInventoryA2CResponse = await TCClient.sendRequestAsync(new TCClient.GetInventoryA2CRequest());
+		let invResponse: TCClient.GetInventoryA2CResponse = await TCClient.sendRequestAsync(new TCClient.GetInventoryA2CRequest(true));
 		
 		if (handleErrorResponse(invResponse, "import items")) return;
 		
