@@ -1772,6 +1772,10 @@ export function activate(context: vscode.ExtensionContext) {
 		})
 	})
 
+	vscode.commands.registerCommand("extension.terracotta.restartLanguageServer", () => {
+		startLanguageServer();
+	})
+
 	//= set up debugger =\\
 
 	vscode.debug.onDidReceiveDebugSessionCustomEvent(event => {

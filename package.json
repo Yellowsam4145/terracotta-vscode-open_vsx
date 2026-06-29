@@ -2,7 +2,7 @@
 	"name": "terracotta",
 	"displayName": "Terracotta",
 	"description": "Provides code editor features for the Terracotta language",
-	"version": "0.0.6",
+	"version": "0.0.7",
 	"publisher": "Owlfroggy",
 	"license": "BSD-3-Clause",
 	"repository": "https://github.com/Owlfroggy/terracotta-vscode",
@@ -23,7 +23,8 @@
 			{
 				"id": "terracotta",
 				"aliases": [
-					"Terracotta"
+					"Terracotta",
+					"tc"
 				],
 				"extensions": [
 					".tc"
@@ -134,6 +135,16 @@
 				"language": "terracotta",
 				"scopeName": "source.terracotta",
 				"path": "./syntaxes/main.json"
+			},
+			{
+				"scopeName": "markdown.terracotta.codeblock",
+				"path": "./syntaxes/terracotta-markdown-injection.json",
+				"injectTo": [
+					"text.html.markdown"
+				],
+				"embeddedLanguages": {
+					"meta.embedded.block.terracotta": "terracotta"
+				}
 			}
 		],
 		"menus": {
@@ -350,6 +361,16 @@
 				"title": "Switch Language Version",
 				"category": "Terracotta",
 				"icon": "$(versions)"
+			},
+			{
+				"command": "extension.terracotta.restartLanguageServer",
+				"title": "Restart Terracotta Language Server",
+				"category": "terracotta"
+			},
+			{
+				"command": "extension.terracotta.restartLanguageServer",
+				"title": "Restart Terracotta Language Server",
+				"category": "terracotta"
 			},
 			{
 				"command": "extension.terracotta.test",
