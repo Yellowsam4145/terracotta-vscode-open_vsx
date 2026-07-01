@@ -30,6 +30,7 @@ enum RequestMethod {
     RENDER_ITEM = "RENDER_ITEM",
     GIVE_ITEM = "GIVE_ITEM",
     GET_INVENTORY = "GET_INVENTORY",
+    GET_CODE_VALUES = "GET_CODE_VALUES",
     RESCAN_PLOT = "RESCAN_PLOT",
 }
 
@@ -370,6 +371,26 @@ export class GetInventoryA2CResponse extends Response {
 
     static override parse(msgJson: any): GetInventoryA2CResponse {
         return new GetInventoryA2CResponse(msgJson.data.items);
+    }
+}
+
+//=- get code values -=\\
+export class GetCodeValuesA2CRequest extends Request {
+    override readonly RESPONSE_CLASS = GetCodeValuesA2CResponse;
+
+    constructor() { super(RequestMethod.GET_CODE_VALUES); }
+
+    protected override buildOn(out: any) {
+        super.buildOn(out);
+    }
+}
+export class GetCodeValuesA2CResponse extends Response {
+    constructor(
+        public values: {[slot: string]: string}
+    ) { super(); }
+
+    static override parse(msgJson: any): GetCodeValuesA2CResponse {
+        return new GetCodeValuesA2CResponse(msgJson.data.values);
     }
 }
 

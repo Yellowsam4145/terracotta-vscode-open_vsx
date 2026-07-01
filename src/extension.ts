@@ -789,7 +789,7 @@ async function startItemLibraryEditor(context: vscode.ExtensionContext) {
 		// if (!await requireCodeClientConnection("Items cannot be imported","code")) {return}
 
 		let invResponse: TCClient.GetInventoryA2CResponse = await TCClient.sendRequestAsync(new TCClient.GetInventoryA2CRequest(true));
-		
+
 		if (handleErrorResponse(invResponse, "import items")) return;
 		
 		let qp = vscode.window.createQuickPick();
@@ -1519,190 +1519,36 @@ export function activate(context: vscode.ExtensionContext) {
 		vscode.window.showInformationMessage("Terracotta is not authorized to interact with Minecraft. Please give it access from within your Minecraft client to enable full functionality.",{modal: true})
 	})
 
-	vscode.commands.registerCommand("extension.terracotta.importCodeValue",async () => {		
-		// let qp = vscode.window.createQuickPick()
-		// qp.title = "Item Converter"
-		// qp.placeholder = "Click on an item icon to convert it and copy it to the clipboard"
-		// qp.ignoreFocusOut = true
-		// qp.canSelectMany = false
-		// qp.onDidAccept(() => {
-		// 	npc.copy((qp.activeItems[0] as any).value)
-		// 	qp.dispose()
-		// })
-		// qp.items = (await CodeClient.getInventory()).map(nbt => {
-		// 	const codeValueString = nbt.components?.["minecraft:custom_data"]?.["PublicBukkitValues"]?.["hypercube:varitem"]
-		// 	if (!codeValueString) { return null }
-			
-		// 	let codeValue: any
-		// 	try {
-		// 		codeValue = JSON.parse(codeValueString)
-		// 	} catch (e) {return null}
+	vscode.commands.registerCommand("extension.terracotta.importCodeValue",async () => {
+		if (!client) {
+			vscode.window.showErrorMessage("Cannot import code values because the language server is not running.","Restart language server")
+			.then(value => {
+				if (value == "Restart language server") {
+					startLanguageServer();
+				}
+			});
+			return;
+		}
 
-		// 	function convertString(s: string): string {
-		// 		return ('"' + s
-		// 			.replaceAll("\\","\\\\")
-		// 			.replaceAll('"','\\"')
-		// 			.replaceAll("\n","\\n")
-		// 			.replaceAll(/&(?=[abcdef0123456789lmnork])/g,"\&")
-		// 			.replaceAll(/§(?=[abcdef0123456789lmnork])/g,"&")
-		// 		+ '"')
-		// 	}
+		let valuesResponse: TCClient.GetCodeValuesA2CResponse = await TCClient.sendRequestAsync(new TCClient.GetCodeValuesA2CRequest());
+		if (handleErrorResponse(valuesResponse, "import code values")) return;
 
-		// 	function convertNumber(n: number): string {
-		// 		return (n
-		// 			.toFixed(3)
-		// 			.replace(/(?<!^)(?:\.|(?<=[^0]))0+$/,"") //remove trailing decimal places
-		// 		)
-		// 	}
+		let conversionResult = await client.sendRequest<{values: {dfType: string, value: string}[]}>("terracotta/convertValues", Object.values(valuesResponse.values));
 
-		// 	let converted: string
-		// 	let args = []
-		// 	switch (codeValue.id) {
-		// 		case "num":
-		// 			// %math expressions currently cannot be expressed in terracotta
-		// 			if (codeValue.data.name.includes("%")) {return null}
-		// 			converted = codeValue.data.name
-		// 			break
-		// 		case "txt": //string, NOT STYLED TEXT
-		// 			converted = convertString(codeValue.data.name)
-		// 			break
-		// 		case "comp": //styled text
-		// 			converted = "s"+convertString(codeValue.data.name)
-		// 			break
-		// 		case "loc":
-		// 			args = [
-		// 				convertNumber(codeValue.data.loc.x),
-		// 				convertNumber(codeValue.data.loc.y),
-		// 				convertNumber(codeValue.data.loc.z),
-		// 			]
-		// 			if (codeValue.data.loc.pitch !== 0 || codeValue.data.loc.yaw !== 0) {
-		// 				args.push(
-		// 					convertNumber(codeValue.data.loc.pitch),
-		// 					convertNumber(codeValue.data.loc.yaw),
-		// 				)
-		// 			}
-		// 			converted = `loc(${args.join(", ")})`
-		// 			break
-		// 		case "vec":
-		// 			args = [
-		// 				convertNumber(codeValue.data.x),
-		// 				convertNumber(codeValue.data.y),
-		// 				convertNumber(codeValue.data.z),
-		// 			]
-		// 			converted = `vec(${args.join(", ")})`
-		// 			break
-		// 		case "snd":
-		// 			let constructorType = codeValue.data.key ? "csnd" : "snd"
-		// 			args = [
-		// 				convertString(codeValue.data.key ?? codeValue.data.sound)
-		// 			]
-		// 			if (codeValue.data.vol !== 2 || codeValue.data.variant) {
-		// 				args.push(
-		// 					convertNumber(codeValue.data.pitch),
-		// 					convertNumber(codeValue.data.vol),
-		// 				)
-		// 				if (codeValue.data.variant) {
-		// 					args.push(convertString(codeValue.data.variant))
-		// 				}
-		// 			} else if (codeValue.data.pitch !== 1) {
-		// 				args.push(convertNumber(codeValue.data.pitch))
-		// 			}
-		// 			converted = `${constructorType}(${args.join(", ")})`
-		// 			break
-		// 		case "part":
-		// 			let fields: {[key: string]: string} = {}
-		// 			const pdata = codeValue.data.data
-
-		// 			if (codeValue.data.cluster.amount !== 1) {
-		// 				fields.Amount = convertNumber(codeValue.data.cluster.amount)
-		// 			}
-		// 			if (codeValue.data.cluster.horizontal !== 0 || codeValue.data.cluster.vertical !== 0) {
-		// 				fields.Spread = `[${convertNumber(codeValue.data.cluster.horizontal)}, ${convertNumber(codeValue.data.cluster.vertical)}]`
-		// 			}
-
-		// 			if (pdata.material !== undefined) {
-		// 				fields.Material = convertString(pdata.material.toLowerCase())
-		// 			}
-
-		// 			if (pdata.roll !== undefined) {
-		// 				if (pdata.roll !== 0) {
-		// 					fields.Roll = convertNumber(pdata.roll)
-		// 				}
-		// 			}
-
-		// 			if (pdata.rgb !== undefined) {
-		// 				fields.Color = convertString("#"+pdata.rgb.toString(16).padStart(6,"0"))
-		// 				if (pdata.rgb_fade !== undefined) {
-		// 					fields["Fade Color"] = convertString("#"+pdata.rgb_fade.toString(16).padStart(6,"0"))
-		// 				}
-		// 				fields["Color Variation"] = convertNumber(pdata.colorVariation)
-		// 			}
-
-		// 			if (pdata.opacity !== undefined) {
-		// 				if (pdata.opacity !== 100) {
-		// 					fields.Opacity = convertNumber(pdata.opacity)
-		// 				}
-		// 			}
-
-		// 			if (pdata.size !== undefined) {
-		// 				if (pdata.size !== 1) {
-		// 					fields.Size = convertNumber(pdata.size)
-		// 				}
-		// 				if (pdata.sizeVariation !== 0) {
-		// 					fields["Size Variation"] = convertNumber(pdata.sizeVariation)
-		// 				}
-		// 			}
-
-		// 			if (pdata.x !== undefined) {
-		// 				if (pdata.x !== 1 || pdata.y !== 0 || pdata.z !== 0) {
-		// 					let args = [
-		// 						convertNumber(pdata.x),
-		// 						convertNumber(pdata.y),
-		// 						convertNumber(pdata.z),
-		// 					]
-		// 					fields.Motion = `vec(${args.join(", ")})`
-		// 				}
-		// 				if (pdata.motionVariation !== 100) {
-		// 					fields["Motion Variation"] = convertNumber(pdata.motionVariation)
-		// 				}
-		// 			}
-
-		// 			if (Object.keys(fields).length > 0) {
-		// 				converted = `par(${convertString(codeValue.data.particle)}, {${Object.entries(fields).map(e => `"${e[0]}" = ${e[1]}`).join(", ")}})`
-		// 			} else {
-		// 				converted = `par(${convertString(codeValue.data.particle)})`
-		// 			}
-		// 			break
-		// 		case "var":
-		// 			let varScope = codeValue.data.scope == "unsaved" ? "global" : codeValue.data.scope
-		// 			let varName: string = codeValue.data.name
-		// 			if (varName.match(/[^A-Za-z0-9_]/)) {
-		// 				converted = `${varScope} (${convertString(varName)})`
-		// 			} else {
-		// 				converted = `${varScope} ${varName}`
-		// 			}
-		// 			break
-		// 		case "pot":
-		// 			args = [
-		// 				convertString(codeValue.data.pot),
-		// 			]
-		// 			if (codeValue.data.amp != 0 || codeValue.data.dur != 1000000) {
-		// 				args.push(convertNumber(codeValue.data.amp+1))
-		// 				if (codeValue.data.dur != 1000000) {
-		// 					args.push(convertNumber(codeValue.data.dur))
-		// 				}
-		// 			}
-		// 			converted = `pot(${args.join(", ")})`
-		// 			break
-		// 		default:
-		// 			return null
-		// 	}
-		// 	return {
-		// 		label: `$(dfcodeitem-${codeValue.id}) ${converted}`,
-		// 		value: converted
-		// 	} as vscode.QuickPickItem
-		// }).filter(v => v !== null)
-		// qp.show()
+		let qp = vscode.window.createQuickPick();
+		qp.title = "Import Code Values from Inventory";
+		qp.placeholder = "Click a value to copy it to the clipboard. Type here to search.";
+		qp.ignoreFocusOut = true;
+		qp.canSelectMany = false;
+		qp.onDidAccept(() => {
+			npc.copy((qp.activeItems[0] as any).value);
+			qp.dispose();
+		});
+		qp.items = conversionResult.values.map(r => ({
+			label: `$(dfcodeitem-${r.dfType}) ${r.value}`,
+			value: r.value,
+		}));
+		qp.show();
 	})
 
 	vscode.commands.registerCommand("extension.terracotta.changeVersion",() => {
