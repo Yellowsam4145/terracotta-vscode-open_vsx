@@ -1220,8 +1220,19 @@ async function buildToMinecraft(debugSession: vscode.DebugSession, launchArgumen
 			templates = JSON.parse(cp.execSync(command,{cwd: os.homedir()}).toString())
 		}
 		catch (e: any) {
-			for (const message of e.output[2].toString().split("\n\n")) {
-				error(message+'\n');
+			// has to be split into chunks since for some reason
+			// the debugger just refuses to print streams that are too long
+			// unless they're heavily chunked like this
+			let errors = e.output[2].toString() as string;
+			const lines = errors.split("\n");
+			const chunks = [];
+
+			for (let i = 0; i < lines.length; i += 200) {
+				chunks.push(lines.slice(i, i + 200).join("\n"));
+			}
+
+			for (const chunk of chunks) {
+				error(chunk);
 			}
 			end(1); return;
 		}
