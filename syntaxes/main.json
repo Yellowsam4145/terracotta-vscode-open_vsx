@@ -231,7 +231,8 @@
                 {"include": "#gameEventHeader"},
                 {"include": "#functionHeader"},
                 {"include": "#processHeader"},
-                {"include": "#lagslayerCancelHeader"}
+                {"include": "#lagslayerCancelHeader"},
+                {"include": "#declareHeader"}
             ],
             "repository": {
                 "playerEventHeader": {
@@ -257,6 +258,10 @@
                 "lagslayerCancelHeader": {
                     "match": "(?<=^|(?:;?\\W+))lscancel(?![\\w])",
                     "name": "storage.type meta.function.tc tc.header.lagslayer-cancel"
+                },
+                "declareHeader": {
+                    "match": "(?<=^|(?:;?\\W+))declare(?![\\w])",
+                    "name": "storage.type meta.function.tc tc.header.declare"
                 }
             }
         },
