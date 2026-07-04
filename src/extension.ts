@@ -1159,12 +1159,14 @@ async function buildToMinecraft(debugSession: vscode.DebugSession, launchArgumen
 	function end(exitCode: number) {
 		debugSession.customRequest("end",exitCode);
 	}
-	async function changeMode(mode: TCClient.DFMode) {
-		let modeChangeResponse = await TCClient.sendRequestAsync(new TCClient.ChangeModeA2CRequest(TCClient.DFMode.DEV));
+	/** returns true if successful, false if otherwise */
+	async function changeMode(mode: TCClient.DFMode): Promise<boolean> {
+		let modeChangeResponse = await TCClient.sendRequestAsync(new TCClient.ChangeModeA2CRequest(mode));
 		if (modeChangeResponse instanceof TCClient.ErrorResponse) {
 			error(`Could not switch to ${mode.toLowerCase()} mode: ${modeChangeResponse.errorMessage}`)
-			end(1); return;
+			end(1); return false;
 		}
+		return true;
 	}
 	try {
 		let terracottaInstallPath = useSourceCode ? sourcePath : terracottaPath;
@@ -1350,7 +1352,7 @@ async function buildToMinecraft(debugSession: vscode.DebugSession, launchArgumen
 		if (TCClient.mode != TCClient.DFMode.DEV) {
 			if (autoSwitchToDev) {
 				log(`Switching to dev mode (currently in ${TCClient.mode.toLowerCase()})`);
-				await changeMode(TCClient.DFMode.DEV);
+				if (!await changeMode(TCClient.DFMode.DEV)) return;
 			} else {
 				log(`You are currently in ${TCClient.mode} mode. Please switch to dev or add '"autoSwitchToDev": true' to your launch configuration.`);
 				end(1); return;
@@ -1384,7 +1386,7 @@ async function buildToMinecraft(debugSession: vscode.DebugSession, launchArgumen
 
 		log(`Code placing complete! ${autoSwitchToPlay ? "Automatically switching to play mode" : ""}\n`);
 		if (autoSwitchToPlay) {
-			TCClient.sendRequest(new TCClient.ChangeModeA2CRequest(TCClient.DFMode.PLAY));
+			if (!await changeMode(TCClient.DFMode.PLAY)) return;
 		}
 		end(0); return;
 	} catch (e) {
