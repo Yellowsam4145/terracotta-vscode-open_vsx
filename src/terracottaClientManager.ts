@@ -24,6 +24,7 @@ enum RequestMethod {
     PROVIDE_TOKEN = "PROVIDE_TOKEN",
     DISPOSE_TOKEN = "DISPOSE_TOKEN",
     INITIATE_CODE_EDIT = "INITIATE_CODE_EDIT",
+    ABORT_CODE_EDIT = "ABORT_CODE_EDIT",
     CHANGE_MODE = "CHANGE_MODE",
     START_EDITING_ITEM = "START_EDITING_ITEM",
     STOP_EDITING_ITEM = "STOP_EDITING_ITEM",
@@ -246,6 +247,24 @@ export class InitiateCodeEditC2AResponse extends Response {
 
     static override parse(msgJson: any): InitiateCodeEditC2AResponse {
         return new InitiateCodeEditC2AResponse();
+    }
+}
+
+//=- abort code edit -=\\
+export class AbortCodeEditA2CRequest extends Request {
+    override readonly RESPONSE_CLASS = AbortCodeEditC2AResponse;
+
+    constructor() { super(RequestMethod.ABORT_CODE_EDIT); }
+
+    protected override buildOn(out: any) {
+        super.buildOn(out);
+    }
+}
+export class AbortCodeEditC2AResponse extends Response {
+    constructor() { super(); }
+
+    static override parse(msgJson: any): AbortCodeEditC2AResponse {
+        return new AbortCodeEditC2AResponse();
     }
 }
 

@@ -43,6 +43,20 @@ const requestHandlers: {[key: string]: (args: dap.Request) => void} = {
         sendResponse(request,{})
         sendEvent("sendLaunchArgs",request.arguments);
     },
+    "disconnect": function (request) {
+        sendEvent('output',{
+            output: "Compilation was canceled from within the IDE\n",
+            category: "stderr",
+        });
+        sendResponse(request,{});
+    },
+    "terminate": function (request) {
+        sendEvent('output',{
+            output: "Compilation was canceled from within the IDE\n",
+            category: "stderr",
+        });
+        sendResponse(request,{});
+    },
     "log": function(request) {
         sendEvent('output',{
             output: request.arguments+"\n",

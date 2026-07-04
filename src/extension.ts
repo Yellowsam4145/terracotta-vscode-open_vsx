@@ -1361,6 +1361,8 @@ async function buildToMinecraft(debugSession: vscode.DebugSession, launchArgumen
 			log(`Compilation was canceled because plot '${TCClient.plotName}' (id: ${TCClient.plotId}) is not included in the list of allowed plots.\n\nTo compile to this plot, add ${TCClient.plotId} to the 'plotIds' array in your launch.json configuration.`);
 			end(1); return;
 		}
+
+		(debugSession.configuration as any).isEditingCode = true;
 		if (TCClient.scanState != TCClient.ScanState.SCANNED) {
 			log(`Scanning codespace... (this may take a few seconds)`);
 			let response = await TCClient.sendRequestAsync(new TCClient.RescanPlotA2CRequest());
@@ -1372,6 +1374,7 @@ async function buildToMinecraft(debugSession: vscode.DebugSession, launchArgumen
 
 		log("Starting to place code...");
 		let placeResponse = await TCClient.sendRequestAsync(new TCClient.InitiateCodeEditA2CRequest(placeTemplates,breakTemplates));
+		(debugSession.configuration as any).isEditingCode = false;
 		if (placeResponse instanceof TCClient.ErrorResponse) {
 			error(`Failed to place code: ${placeResponse.errorMessage}`);
 			end(1); return;
@@ -1651,11 +1654,14 @@ export function activate(context: vscode.ExtensionContext) {
 	})
 
 	vscode.debug.onDidStartDebugSession(async session => {
-		debuggers[session.id] = session
+		debuggers[session.id] = session;
 	})
 
 	vscode.debug.onDidTerminateDebugSession(session => {
-		delete debuggers[session.id]
+		if ((session.configuration as any).isEditingCode) {
+			TCClient.sendRequest(new TCClient.AbortCodeEditA2CRequest());
+		}
+		delete debuggers[session.id];
 	})
 
 	//= settings response =\\
