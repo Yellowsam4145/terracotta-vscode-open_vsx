@@ -112,26 +112,17 @@
                 },
                 "string": {
                     "patterns": [
+                        {"include": "#doubleString"},
+                        {"include": "#singleString"},
                         {"include": "#styledDoubleString"},
                         {"include": "#styledSingleString"},
-                        {"include": "#doubleString"},
-                        {"include": "#singleString"}
+                        {"include": "#numericDoubleString"},
+                        {"include": "#numericSingleString"}
                     ],
                     "repository": {
                         "doubleString": {
                             "match": "(\"(?:[^\"\\\\]|\\\\.)*(?:\"|$|\\\\))",
                             "name": "string.quoted.double.tc",
-                            "captures": {
-                                "1": {
-                                    "patterns": [
-                                        {"include": "#escapedChar"}
-                                    ]
-                                }
-                            }
-                        },
-                        "styledDoubleString": {
-                            "match": "(?:(?<=\\W)|^)s\"((?:[^\"\\\\]|\\\\.)*(?:\"|$|\\\\))",
-                            "name": "string.quoted.double.tc df.item.styled-text.tc",
                             "captures": {
                                 "1": {
                                     "patterns": [
@@ -151,9 +142,42 @@
                                 }
                             }
                         },
+                        "styledDoubleString": {
+                            "match": "(?:(?<=\\W)|^)s\"((?:[^\"\\\\]|\\\\.)*(?:\"|$|\\\\))",
+                            "name": "string.quoted.double.tc df.item.styled-text.tc",
+                            "captures": {
+                                "1": {
+                                    "patterns": [
+                                        {"include": "#escapedChar"}
+                                    ]
+                                }
+                            }
+                        },
                         "styledSingleString": {
                             "match": "(?:(?<=\\W)|^)s'((?:[^'\\\\]|\\\\.)*(?:'|$|\\\\))",
                             "name": "string.quoted.single.tc df.item.styled-text.tc",
+                            "captures": {
+                                "1": {
+                                    "patterns": [
+                                        {"include": "#escapedChar"}
+                                    ]
+                                }
+                            }
+                        },
+                        "numericDoubleString": {
+                            "match": "(?:(?<=\\W)|^)n\"((?:[^\"\\\\]|\\\\.)*(?:\"|$|\\\\))",
+                            "name": "string.quoted.double.tc constant.numeric.quoted.double.tc df.item.number.tc",
+                            "captures": {
+                                "1": {
+                                    "patterns": [
+                                        {"include": "#escapedChar"}
+                                    ]
+                                }
+                            }
+                        },
+                        "numericSingleString": {
+                            "match": "(?:(?<=\\W)|^)n'((?:[^'\\\\]|\\\\.)*(?:'|$|\\\\))",
+                            "name": "string.quoted.single.tc constant.numeric.quoted.double.tc df.item.number.tc",
                             "captures": {
                                 "1": {
                                     "patterns": [
