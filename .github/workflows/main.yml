@@ -11,8 +11,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -21,6 +20,9 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Build extension
+        run: npm run compile
 
       - name: Install vsce
         run: npm install -g @vscode/vsce
@@ -31,5 +33,5 @@ jobs:
       - name: Upload VSIX artifact
         uses: actions/upload-artifact@v4
         with:
-          name: Terracotta-for-vscode
+          name: terracotta-vsix
           path: "*.vsix"
