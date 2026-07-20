@@ -3,8 +3,8 @@ name: Build VSIX
 on:
   workflow_dispatch:
   push:
-    branches:
-      - terracotta_client
+    tags:
+      - "v*"
 
 jobs:
   package:
