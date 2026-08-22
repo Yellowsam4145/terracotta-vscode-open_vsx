@@ -391,30 +391,29 @@ function parseMaterial(value: string): any {
 
 //leave itemId blank to stop editing an entire library
 function stopEditingLocally(project: string, libraryId: string, itemId: string | undefined = undefined) {
-	if (itemsBeingEdited[project]?.[libraryId]) {
-
+	const projectItems = itemsBeingEdited[project];
+	const libraryItems = projectItems?.[libraryId];
+	
+	if (libraryItems) {
 		//remove item
 		if (itemId) {
-			//remove library
-			delete itemsBeingEdited[project][libraryId][itemId]
+			delete libraryItems[itemId];
 
 			//if the library now has no items being edited, remove it
-			if (Object.keys(itemsBeingEdited[project][libraryId] || {}).length == 0) {
-				delete itemsBeingEdited[project][libraryId]
+			if (Object.keys(libraryItems).length == 0) {
+				delete projectItems![libraryId];
 			}
 		//remove library directly
 		} else {
-			delete itemsBeingEdited[project][libraryId]
+			delete projectItems![libraryId];
 		}
 		
-		
 		//if the project now has no libraries being edited, remove it
-		if (Object.keys(itemsBeingEdited[project] || {}).length == 0) {
-			delete itemsBeingEdited[project]
+		if (Object.keys(projectItems!).length == 0) {
+			delete itemsBeingEdited[project];
 		}
 	}
 }
-
 
 function stopEditingAllItems() {
 	// when switching out of dev mode, stop editing all items
