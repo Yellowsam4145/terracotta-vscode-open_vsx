@@ -399,7 +399,7 @@ function stopEditingLocally(project: string, libraryId: string, itemId: string |
 			delete itemsBeingEdited[project][libraryId][itemId]
 
 			//if the library now has no items being edited, remove it
-			if (Object.keys(itemsBeingEdited[project][libraryId]).length == 0) {
+			if (Object.keys(itemsBeingEdited[project][libraryId] || {}).length == 0) {
 				delete itemsBeingEdited[project][libraryId]
 			}
 		//remove library directly
@@ -409,11 +409,12 @@ function stopEditingLocally(project: string, libraryId: string, itemId: string |
 		
 		
 		//if the project now has no libraries being edited, remove it
-		if (Object.keys(itemsBeingEdited[project]).length == 0) {
+		if (Object.keys(itemsBeingEdited[project] || {}).length == 0) {
 			delete itemsBeingEdited[project]
 		}
 	}
 }
+
 
 function stopEditingAllItems() {
 	// when switching out of dev mode, stop editing all items
